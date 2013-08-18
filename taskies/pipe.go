@@ -26,12 +26,12 @@ func PipeProvider(ps ProviderSet, data interface{}) (Task, error) {
         tasks[i] = task.task
     }
 
-    return func(env Env, in io.Reader, out, err io.Writer) error {
+    return func(env *Env, in io.Reader, out, err io.Writer) error {
         return Pipe(env, in, out, err, tasks...)
     }, nil
 }
 
-func Pipe(env Env, in io.Reader, out, err io.Writer, tasks ...Task) error {
+func Pipe(env *Env, in io.Reader, out, err io.Writer, tasks ...Task) error {
     ch := make(chan error)
     l := len(tasks)
 

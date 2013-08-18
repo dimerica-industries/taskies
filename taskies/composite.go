@@ -6,7 +6,7 @@ import (
     "reflect"
 )
 
-func RunMany(tasks []Task, env Env, in io.Reader, out, err io.Writer) error {
+func RunMany(tasks []Task, env *Env, in io.Reader, out, err io.Writer) error {
     for _, t := range tasks {
         if e := t(env, in, out, err); e != nil {
             return e
@@ -36,7 +36,7 @@ func CompositeProvider(ps ProviderSet, data interface{}) (Task, error) {
         tasks[i] = task.task
     }
 
-    return func(env Env, in io.Reader, out, err io.Writer) error {
+    return func(env *Env, in io.Reader, out, err io.Writer) error {
         return RunMany(tasks, env, in, out, err)
     }, nil
 }

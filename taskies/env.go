@@ -2,10 +2,11 @@ package taskies
 
 import (
     "strings"
+    "sync"
 )
 
-func FromArray(arr []string) Env {
-    env := make(Env)
+func FromArray(arr []string) *Env {
+    env := NewEnv()
 
     for _, v := range arr {
         parts := strings.SplitN(v, "=", 2)
@@ -16,19 +17,42 @@ func FromArray(arr []string) Env {
             val = parts[1]
         }
 
-        env[key] = val
+        env.vals[key] = val
     }
 
     return env
 }
 
-type Env map[string]string
+func NewEnv() *Env {
+    return &Env{
+        vals: make(map[string]string),
+    }
+}
+
+type Env struct {
+    l sync.Mutex
+    vals map[string]string
+}
+
+func (e *Env) Get(k string) string {
+    e.l.Lock()
+    defer e.l.Unlock()
+
+    return e.vals[k]
+}
+
+func (e *Env) Set(k string, v string) {
+    e.l.Lock()
+    defer e.l.Unlock()
+
+    e.vals[k] = v
+}
 
 func (v Env) Array() []string {
-    a := make([]string, len(v))
+    a := make([]string, len(v.vals))
     i := 0
 
-    for k, v := range v {
+    for k, v := range v.vals {
         a[i] = k + "=" + v
         i++
     }
@@ -36,16 +60,16 @@ func (v Env) Array() []string {
     return a
 }
 
-func MergeEnv(one Env, others ...Env) Env {
-    env := make(Env)
+func MergeEnv(one Env, others ...Env) *Env {
+    env := NewEnv()
 
-    for k, v := range one {
-        env[k] = v
+    for k, v := range one.vals {
+        env.vals[k] = v
     }
 
     for _, env2 := range others {
-        for k, v := range env2 {
-            env[k] = v
+        for k, v := range env2.vals {
+            env.vals[k] = v
         }
     }
 

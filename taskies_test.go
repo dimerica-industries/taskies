@@ -20,7 +20,7 @@ func test(contents []byte, in io.Reader) ([]byte, []byte, error) {
     err := bytes.NewBuffer([]byte{})
     ts := taskies.NewTaskSet()
     e := taskies.DecodeYAML(contents, ts)
-    run := taskies.NewRunner(ts.Tasks, make(taskies.Env), in, out, err)
+    run := taskies.NewRunner(ts.Tasks, taskies.NewEnv(), in, out, err)
 
     if e != nil {
         return nil, nil, e
@@ -114,5 +114,4 @@ tasks:
     if strings.TrimSpace(str) != "1010" {
         t.Errorf("Expecting \"1010\" found \"%s\"", str)
     }
-
 }

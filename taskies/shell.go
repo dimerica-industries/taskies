@@ -25,7 +25,7 @@ type ShellTask struct {
     args []string
 }
 
-func (s *ShellTask) Run(env Env, in io.Reader, out, err io.Writer) error {
+func (s *ShellTask) Run(env *Env, in io.Reader, out, err io.Writer) error {
     cmd := exec.Command(s.cmd, s.args...)
 
     cmd.Env = env.Array()

@@ -64,7 +64,8 @@ func main() {
         }
     }
 
-    runner := taskies.NewRunner(ts.Tasks, taskies.FromArray(os.Environ()), os.Stdin, os.Stdout, os.Stderr)
+    env := taskies.NewEnv()
+    runner := taskies.NewRunner(ts.Tasks, env, os.Stdin, os.Stdout, os.Stderr)
     err := runner.Run(tasks...)
 
     if err != nil {

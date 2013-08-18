@@ -5,9 +5,9 @@ import (
     "fmt"
 )
 
-type Task func(env Env, in io.Reader, out, err io.Writer) error
+type Task func(env *Env, in io.Reader, out, err io.Writer) error
 
-func NewRunner(tasks map[string]Task, env Env, in io.Reader, out, err io.Writer) *Runner {
+func NewRunner(tasks map[string]Task, env *Env, in io.Reader, out, err io.Writer) *Runner {
     return &Runner {
         tasks: tasks,
         env: env,
@@ -19,7 +19,7 @@ func NewRunner(tasks map[string]Task, env Env, in io.Reader, out, err io.Writer)
 
 type Runner struct {
     tasks map[string]Task
-    env Env
+    env *Env
     in io.Reader
     out io.Writer
     err io.Writer
