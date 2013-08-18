@@ -26,53 +26,53 @@ func pipeProvider(ps providerSet, data interface{}) (Task, error) {
 		tasks[i] = task.task
 	}
 
-	return func(env *Env, in io.Reader, out, err io.Writer) error {
-		return Pipe(env, in, out, err, tasks...)
-	}, nil
+	return PipeTask(tasks...), nil
 }
 
-func Pipe(env *Env, in io.Reader, out, err io.Writer, tasks ...Task) error {
-	ch := make(chan error)
-	l := len(tasks)
+func PipeTask(tasks ...Task) Task {
+	return func(env *Env, in io.Reader, out, err io.Writer) error {
+		ch := make(chan error)
+		l := len(tasks)
 
-	for i, t := range tasks {
-		var (
-			pr io.Reader
-			pw io.Writer
-		)
+		for i, t := range tasks {
+			var (
+				pr io.Reader
+				pw io.Writer
+			)
 
-		if i == l-1 {
-			pr = in
-			pw = out
-		} else {
-			pr, pw = io.Pipe()
-		}
-
-		go func(t Task, in io.Reader, out io.Writer) {
-			err := t(env, in, out, err)
-
-			if c, ok := out.(io.Closer); ok {
-				c.Close()
+			if i == l-1 {
+				pr = in
+				pw = out
+			} else {
+				pr, pw = io.Pipe()
 			}
 
-			ch <- err
-		}(t, in, pw)
+			go func(t Task, in io.Reader, out io.Writer) {
+				err := t(env, in, out, err)
 
-		in = pr
-	}
+				if c, ok := out.(io.Closer); ok {
+					c.Close()
+				}
 
-	i := 0
-	for err := range ch {
-		if err != nil {
-			return err
+				ch <- err
+			}(t, in, pw)
+
+			in = pr
 		}
 
-		i++
+		i := 0
+		for err := range ch {
+			if err != nil {
+				return err
+			}
 
-		if i == l {
-			return nil
+			i++
+
+			if i == l {
+				return nil
+			}
 		}
-	}
 
-	return nil
+		return nil
+	}
 }

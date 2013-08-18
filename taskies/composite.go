@@ -6,14 +6,16 @@ import (
 	"reflect"
 )
 
-func RunMany(tasks []Task, env *Env, in io.Reader, out, err io.Writer) error {
-	for _, t := range tasks {
-		if e := t(env, in, out, err); e != nil {
-			return e
+func CompositeTask(tasks ...Task) Task {
+	return func(env *Env, in io.Reader, out, err io.Writer) error {
+		for _, t := range tasks {
+			if e := t(env, in, out, err); e != nil {
+				return e
+			}
 		}
-	}
 
-	return nil
+		return nil
+	}
 }
 
 func compositeProvider(ps providerSet, data interface{}) (Task, error) {
@@ -36,7 +38,5 @@ func compositeProvider(ps providerSet, data interface{}) (Task, error) {
 		tasks[i] = task.task
 	}
 
-	return func(env *Env, in io.Reader, out, err io.Writer) error {
-		return RunMany(tasks, env, in, out, err)
-	}, nil
+	return CompositeTask(tasks...), nil
 }

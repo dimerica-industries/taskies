@@ -1,6 +1,7 @@
 package taskies
 
 import (
+	"fmt"
 	"io"
 	"os/exec"
 	"reflect"
@@ -8,30 +9,23 @@ import (
 
 func shellProvider(ps providerSet, data interface{}) (Task, error) {
 	val := reflect.ValueOf(data)
-	t := &ShellTask{}
 
-	switch val.Kind() {
-	case reflect.Map:
-	case reflect.String:
-		t.cmd = "sh"
-		t.args = []string{"-c", val.String()}
+	if val.Kind() != reflect.String {
+		return nil, fmt.Errorf("shell requires string, %s found", val.Kind())
 	}
 
-	return t.Run, nil
+	return ShellTask("sh", []string{"-c", val.String()}), nil
 }
 
-type ShellTask struct {
-	cmd  string
-	args []string
-}
+func ShellTask(cmd string, args []string) Task {
+	return func(env *Env, in io.Reader, out, err io.Writer) error {
+		cmd := exec.Command(cmd, args...)
 
-func (s *ShellTask) Run(env *Env, in io.Reader, out, err io.Writer) error {
-	cmd := exec.Command(s.cmd, s.args...)
+		cmd.Env = env.Array()
+		cmd.Stdin = in
+		cmd.Stdout = out
+		cmd.Stderr = err
 
-	cmd.Env = env.Array()
-	cmd.Stdin = in
-	cmd.Stdout = out
-	cmd.Stderr = err
-
-	return cmd.Run()
+		return cmd.Run()
+	}
 }
