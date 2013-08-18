@@ -144,6 +144,9 @@ func decodeTask(val reflect.Value, ts *TaskSet) error {
     }
 
     ts.Tasks[t.name] = t.task
+    ts.Providers[t.name] = func(ps ProviderSet, data interface{}) (Task, error) {
+        return t.task, nil
+    }
 
     return nil
 }

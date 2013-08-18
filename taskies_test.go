@@ -45,7 +45,7 @@ tasks:
     out, _, e := test(yaml, nil)
 
     if e != nil {
-        t.Error(e)
+        t.Fatal(e)
     }
 
     if strings.TrimSpace(string(out)) != "3" {
@@ -65,7 +65,7 @@ tasks:
     out, _, e := test(yaml, nil)
 
     if e != nil {
-        t.Error(e)
+        t.Fatal(e)
     }
 
     if strings.TrimSpace(string(out)) != "3" {
@@ -84,7 +84,7 @@ tasks:
     out, _, e := test(yaml, nil)
 
     if e != nil {
-        t.Error(e)
+        t.Fatal(e)
     }
 
     str := strings.TrimSpace(string(out))
@@ -92,4 +92,27 @@ tasks:
     if strings.TrimSpace(str) != "103" {
         t.Errorf("Expecting \"103\" found \"%s\"", str)
     }
+}
+
+func TestCustom(t *testing.T) {
+    yaml := []byte(`
+tasks:
+    - name: test
+      shell: bash -c "echo -n 10"
+    - name: test2
+      test: doit
+`)
+
+    out, _, e := test(yaml, nil)
+
+    if e != nil {
+        t.Fatal(e)
+    }
+
+    str := strings.TrimSpace(string(out))
+
+    if strings.TrimSpace(str) != "1010" {
+        t.Errorf("Expecting \"1010\" found \"%s\"", str)
+    }
+
 }
