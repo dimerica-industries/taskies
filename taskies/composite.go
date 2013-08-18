@@ -16,7 +16,7 @@ func RunMany(tasks []Task, env *Env, in io.Reader, out, err io.Writer) error {
 	return nil
 }
 
-func CompositeProvider(ps ProviderSet, data interface{}) (Task, error) {
+func compositeProvider(ps providerSet, data interface{}) (Task, error) {
 	val := reflect.ValueOf(data)
 
 	if val.Kind() != reflect.Slice {
@@ -27,7 +27,7 @@ func CompositeProvider(ps ProviderSet, data interface{}) (Task, error) {
 
 	for i := 0; i < val.Len(); i++ {
 		d := val.Index(i).Elem().Interface()
-		task, err := ps.Provide(d)
+		task, err := ps.provide(d)
 
 		if err != nil {
 			return nil, err

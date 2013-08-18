@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-func ShellProvider(ps ProviderSet, data interface{}) (Task, error) {
+func shellProvider(ps providerSet, data interface{}) (Task, error) {
 	val := reflect.ValueOf(data)
 	t := &ShellTask{}
 

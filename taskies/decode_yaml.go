@@ -6,15 +6,15 @@ import (
 	"reflect"
 )
 
-type NamedTask struct {
+type namedTask struct {
 	name string
 	task Task
 }
 
-type Provider func(ProviderSet, interface{}) (Task, error)
-type ProviderSet map[string]Provider
+type provider func(providerSet, interface{}) (Task, error)
+type providerSet map[string]provider
 
-func (ps ProviderSet) Provide(data interface{}) (*NamedTask, error) {
+func (ps providerSet) provide(data interface{}) (*namedTask, error) {
 	val := reflect.ValueOf(data)
 
 	if val.Kind() != reflect.Map {
@@ -58,7 +58,7 @@ func (ps ProviderSet) Provide(data interface{}) (*NamedTask, error) {
 		return nil, err
 	}
 
-	return &NamedTask{
+	return &namedTask{
 		name: name,
 		task: t,
 	}, nil
@@ -67,10 +67,10 @@ func (ps ProviderSet) Provide(data interface{}) (*NamedTask, error) {
 func NewTaskSet() *TaskSet {
 	return &TaskSet{
 		Env: NewEnv(),
-		Providers: map[string]Provider{
-			"shell": ShellProvider,
-			"pipe":  PipeProvider,
-			"tasks": CompositeProvider,
+		providers: map[string]provider{
+			"shell": shellProvider,
+			"pipe":  pipeProvider,
+			"tasks": compositeProvider,
 		},
 		Tasks: make(map[string]Task),
 	}
@@ -78,7 +78,7 @@ func NewTaskSet() *TaskSet {
 
 type TaskSet struct {
 	Env       *Env
-	Providers ProviderSet
+	providers providerSet
 	Tasks     map[string]Task
 }
 
@@ -154,7 +154,7 @@ func decodeTasks(val reflect.Value, ts *TaskSet) error {
 }
 
 func decodeTask(val reflect.Value, ts *TaskSet) error {
-	t, err := ts.Providers.Provide(val.Interface())
+	t, err := ts.providers.provide(val.Interface())
 
 	if err != nil {
 		return err
@@ -165,7 +165,7 @@ func decodeTask(val reflect.Value, ts *TaskSet) error {
 	}
 
 	ts.Tasks[t.name] = t.task
-	ts.Providers[t.name] = func(ps ProviderSet, data interface{}) (Task, error) {
+	ts.providers[t.name] = func(ps providerSet, data interface{}) (Task, error) {
 		return t.task, nil
 	}
 

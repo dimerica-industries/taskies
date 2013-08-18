@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-func PipeProvider(ps ProviderSet, data interface{}) (Task, error) {
+func pipeProvider(ps providerSet, data interface{}) (Task, error) {
 	val := reflect.ValueOf(data)
 
 	if val.Kind() != reflect.Slice {
@@ -17,7 +17,7 @@ func PipeProvider(ps ProviderSet, data interface{}) (Task, error) {
 
 	for i := 0; i < val.Len(); i++ {
 		d := val.Index(i).Elem().Interface()
-		task, err := ps.Provide(d)
+		task, err := ps.provide(d)
 
 		if err != nil {
 			return nil, err
