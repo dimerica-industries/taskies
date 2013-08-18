@@ -66,6 +66,7 @@ func (ps ProviderSet) Provide(data interface{}) (*NamedTask, error) {
 
 func NewTaskSet() *TaskSet {
     return &TaskSet{
+        Env: NewEnv(),
         Providers: map[string]Provider{
             "shell": ShellProvider,
             "pipe": PipeProvider,
@@ -76,6 +77,7 @@ func NewTaskSet() *TaskSet {
 }
 
 type TaskSet struct {
+    Env *Env
     Providers ProviderSet
     Tasks map[string]Task
 }
@@ -107,6 +109,11 @@ func DecodeYAML(contents []byte, ts *TaskSet) error {
                 return err
             }
         case "env":
+            err = decodeEnv(v, ts)
+
+            if err != nil {
+                return err
+            }
         default:
         }
     }
@@ -114,7 +121,21 @@ func DecodeYAML(contents []byte, ts *TaskSet) error {
     return nil
 }
 
-func decodeTasks(val reflect.Value, ts *TaskSet) error{
+func decodeEnv(val reflect.Value, ts *TaskSet) error {
+    if val.Kind() != reflect.Map {
+        return fmt.Errorf("Expecting map, found %s", val.Kind())
+    }
+
+    keys := val.MapKeys()
+
+    for _, k := range keys {
+        ts.Env.Set(k.Elem().String(), val.MapIndex(k).Elem().String())
+    }
+
+    return nil
+}
+
+func decodeTasks(val reflect.Value, ts *TaskSet) error {
     if val.Kind() != reflect.Slice {
         return fmt.Errorf("Expecting slice, found %s", val.Kind())
     }

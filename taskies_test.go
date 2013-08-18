@@ -115,3 +115,23 @@ tasks:
         t.Errorf("Expecting \"1010\" found \"%s\"", str)
     }
 }
+
+func TestDecodeEnv(t *testing.T) {
+    yaml := []byte(`
+env:
+  key: value 
+`)
+    ts := taskies.NewTaskSet()
+    e := taskies.DecodeYAML(yaml, ts)
+
+    if e != nil {
+        t.Fatal(e)
+    }
+
+    v := ts.Env.Get("key")
+
+    if v != "value" {
+        t.Fatalf("Expecting \"value\", found \"%s\"", v)
+    }
+}
+
