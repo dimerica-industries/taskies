@@ -1,12 +1,12 @@
 package taskies
 
 import (
-    "fmt"
-    "os"
+	"fmt"
+	"os"
 )
 
 func Debugf(format string, args ...interface{}) {
-    if os.Getenv("DEBUG") != "" {
-        fmt.Printf("[DEBUG] " + format, args...)
-    }
+	if os.Getenv("DEBUG") != "" {
+		fmt.Printf("[DEBUG] "+format, args...)
+	}
 }

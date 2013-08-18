@@ -1,173 +1,173 @@
 package taskies
 
 import (
-    "launchpad.net/goyaml"
-    "fmt"
-    "reflect"
+	"fmt"
+	"launchpad.net/goyaml"
+	"reflect"
 )
 
 type NamedTask struct {
-    name string
-    task Task
+	name string
+	task Task
 }
 
 type Provider func(ProviderSet, interface{}) (Task, error)
 type ProviderSet map[string]Provider
 
 func (ps ProviderSet) Provide(data interface{}) (*NamedTask, error) {
-    val := reflect.ValueOf(data)
+	val := reflect.ValueOf(data)
 
-    if val.Kind() != reflect.Map {
-        return nil, fmt.Errorf("Expecting map, found%s", val.Kind())
-    }
+	if val.Kind() != reflect.Map {
+		return nil, fmt.Errorf("Expecting map, found%s", val.Kind())
+	}
 
-    keys := val.MapKeys()
+	keys := val.MapKeys()
 
-    var (
-        name string
-        task string
-        contents interface{}
-    )
+	var (
+		name     string
+		task     string
+		contents interface{}
+	)
 
-    for _, k := range keys {
-        v := val.MapIndex(k).Elem()
-        ks := k.Elem().String()
+	for _, k := range keys {
+		v := val.MapIndex(k).Elem()
+		ks := k.Elem().String()
 
-        switch ks {
-        case "name":
-            name = v.String()
-        default:
-            task = ks
-            contents = v.Interface()
-        }
-    }
+		switch ks {
+		case "name":
+			name = v.String()
+		default:
+			task = ks
+			contents = v.Interface()
+		}
+	}
 
-    if task == "" {
-        return nil, fmt.Errorf("No task provided")
-    }
+	if task == "" {
+		return nil, fmt.Errorf("No task provided")
+	}
 
-    prov, ok := ps[task]
+	prov, ok := ps[task]
 
-    if !ok {
-        return nil, fmt.Errorf("No task named \"%s\" found", task)
-    }
+	if !ok {
+		return nil, fmt.Errorf("No task named \"%s\" found", task)
+	}
 
-    t, err := prov(ps, contents)
+	t, err := prov(ps, contents)
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    return &NamedTask{
-        name: name,
-        task: t,
-    }, nil
+	return &NamedTask{
+		name: name,
+		task: t,
+	}, nil
 }
 
 func NewTaskSet() *TaskSet {
-    return &TaskSet{
-        Env: NewEnv(),
-        Providers: map[string]Provider{
-            "shell": ShellProvider,
-            "pipe": PipeProvider,
-            "tasks": CompositeProvider,
-        },
-        Tasks: make(map[string]Task),
-    }
+	return &TaskSet{
+		Env: NewEnv(),
+		Providers: map[string]Provider{
+			"shell": ShellProvider,
+			"pipe":  PipeProvider,
+			"tasks": CompositeProvider,
+		},
+		Tasks: make(map[string]Task),
+	}
 }
 
 type TaskSet struct {
-    Env *Env
-    Providers ProviderSet
-    Tasks map[string]Task
+	Env       *Env
+	Providers ProviderSet
+	Tasks     map[string]Task
 }
 
 func DecodeYAML(contents []byte, ts *TaskSet) error {
-    var data interface{}
-    err := goyaml.Unmarshal(contents, &data)
+	var data interface{}
+	err := goyaml.Unmarshal(contents, &data)
 
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    val := reflect.ValueOf(data)
+	val := reflect.ValueOf(data)
 
-    if val.Kind() != reflect.Map {
-        return fmt.Errorf("Expecting map, found %s", val.Kind())
-    }
+	if val.Kind() != reflect.Map {
+		return fmt.Errorf("Expecting map, found %s", val.Kind())
+	}
 
-    keys := val.MapKeys()
+	keys := val.MapKeys()
 
-    for _, k := range keys {
-        v := val.MapIndex(k).Elem()
+	for _, k := range keys {
+		v := val.MapIndex(k).Elem()
 
-        switch k.Elem().String() {
-        case "tasks":
-            err = decodeTasks(v, ts)
+		switch k.Elem().String() {
+		case "tasks":
+			err = decodeTasks(v, ts)
 
-            if err != nil {
-                return err
-            }
-        case "env":
-            err = decodeEnv(v, ts)
+			if err != nil {
+				return err
+			}
+		case "env":
+			err = decodeEnv(v, ts)
 
-            if err != nil {
-                return err
-            }
-        default:
-        }
-    }
+			if err != nil {
+				return err
+			}
+		default:
+		}
+	}
 
-    return nil
+	return nil
 }
 
 func decodeEnv(val reflect.Value, ts *TaskSet) error {
-    if val.Kind() != reflect.Map {
-        return fmt.Errorf("Expecting map, found %s", val.Kind())
-    }
+	if val.Kind() != reflect.Map {
+		return fmt.Errorf("Expecting map, found %s", val.Kind())
+	}
 
-    keys := val.MapKeys()
+	keys := val.MapKeys()
 
-    for _, k := range keys {
-        ts.Env.Set(k.Elem().String(), val.MapIndex(k).Elem().String())
-    }
+	for _, k := range keys {
+		ts.Env.Set(k.Elem().String(), val.MapIndex(k).Elem().String())
+	}
 
-    return nil
+	return nil
 }
 
 func decodeTasks(val reflect.Value, ts *TaskSet) error {
-    if val.Kind() != reflect.Slice {
-        return fmt.Errorf("Expecting slice, found %s", val.Kind())
-    }
+	if val.Kind() != reflect.Slice {
+		return fmt.Errorf("Expecting slice, found %s", val.Kind())
+	}
 
-    l := val.Len()
+	l := val.Len()
 
-    for i := 0; i < l; i++ {
-        tval := val.Index(i).Elem()
+	for i := 0; i < l; i++ {
+		tval := val.Index(i).Elem()
 
-        if err := decodeTask(tval, ts); err != nil {
-            return err
-        }
-    }
+		if err := decodeTask(tval, ts); err != nil {
+			return err
+		}
+	}
 
-    return nil
+	return nil
 }
 
 func decodeTask(val reflect.Value, ts *TaskSet) error {
-    t, err := ts.Providers.Provide(val.Interface())
+	t, err := ts.Providers.Provide(val.Interface())
 
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    if t.name == "" {
-        return fmt.Errorf("No name found")
-    }
+	if t.name == "" {
+		return fmt.Errorf("No name found")
+	}
 
-    ts.Tasks[t.name] = t.task
-    ts.Providers[t.name] = func(ps ProviderSet, data interface{}) (Task, error) {
-        return t.task, nil
-    }
+	ts.Tasks[t.name] = t.task
+	ts.Providers[t.name] = func(ps ProviderSet, data interface{}) (Task, error) {
+		return t.task, nil
+	}
 
-    return nil
+	return nil
 }
