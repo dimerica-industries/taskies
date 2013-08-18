@@ -26,7 +26,7 @@ func test(contents []byte, in io.Reader) ([]byte, []byte, error) {
         return nil, nil, e
     }
 
-    e = run.Run()
+    e = run.RunAll()
 
     if e != nil {
         return nil, nil, e
