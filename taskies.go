@@ -8,6 +8,10 @@ import (
     "os"
 )
 
+const (
+    DEFAULT_FILE = "Taskies"
+)
+
 type ArrayOpts []string
 
 func (arr *ArrayOpts) String() string {
@@ -33,7 +37,13 @@ func main() {
 
     flag.Parse()
 
-    if len(*files) == 0 || *help {
+    tasks := flag.Args()
+
+    if len(*files) == 0 {
+        *files = ArrayOpts{DEFAULT_FILE}
+    }
+
+    if len(tasks) == 0 || *help {
         flag.Usage()
         os.Exit(0)
     }
@@ -52,5 +62,12 @@ func main() {
         if err != nil {
             panic("YAML decode error: " + err.Error())
         }
+    }
+
+    runner := taskies.NewRunner(ts.Tasks, taskies.FromArray(os.Environ()), os.Stdin, os.Stdout, os.Stderr)
+    err := runner.Run(tasks...)
+
+    if err != nil {
+        panic(err)
     }
 }

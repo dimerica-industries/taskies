@@ -2,6 +2,7 @@ package taskies
 
 import (
     "io"
+    "fmt"
 )
 
 type Task func(env Env, in io.Reader, out, err io.Writer) error
@@ -24,9 +25,25 @@ type Runner struct {
     err io.Writer
 }
 
-func (r *Runner) Run() error {
+func (r *Runner) RunAll() error {
     for _, t := range r.tasks {
         if err := t(r.env, r.in, r.out, r.err); err != nil {
+            return err
+        }
+    }
+
+    return nil
+}
+
+func (r *Runner) Run(tasks ...string) error {
+    for _, t := range tasks {
+        task, ok := r.tasks[t]
+
+        if !ok {
+            return fmt.Errorf("Missing task %s", t)
+        }
+
+        if err := task(r.env, r.in, r.out, r.err); err != nil {
             return err
         }
     }
