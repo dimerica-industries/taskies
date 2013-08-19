@@ -1,6 +1,7 @@
 package taskies
 
 import (
+    "bytes"
 	"fmt"
 	"io"
 )
@@ -23,7 +24,22 @@ func (c *RunContext) Run(t Task) error {
 	ctxt.Env = ctxt.Env.Child()
 	Debugf("[task] [%s]", t.Name())
 
-	return t.Run(ctxt)
+    out := new(bytes.Buffer)
+    er := new(bytes.Buffer)
+
+    ctxt.Out = io.MultiWriter(ctxt.Out, out)
+    ctxt.Err = io.MultiWriter(ctxt.Err, er)
+
+    err := t.Run(ctxt)
+
+    c.Env.Set("$result.stdout", string(out.Bytes()))
+    c.Env.Set("$result.stderr", string(er.Bytes()))
+
+    if err != nil {
+        c.Env.Set("$result.error", err.Error())
+    }
+
+    return err
 }
 
 func (c *RunContext) Clone() *RunContext {
