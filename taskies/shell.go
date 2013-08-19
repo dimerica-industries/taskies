@@ -19,13 +19,18 @@ func shellProvider(ps providerSet, data interface{}) (Task, error) {
 
 func ShellTask(cmd string, args []string) Task {
 	return func(env *Env, in io.Reader, out, err io.Writer) error {
-		cmd := exec.Command(cmd, args...)
+		cmd = template(cmd, env)
 
-		cmd.Env = env.Array()
-		cmd.Stdin = in
-		cmd.Stdout = out
-		cmd.Stderr = err
+		for i, a := range args {
+			args[i] = template(a, env)
+		}
 
-		return cmd.Run()
+		c := exec.Command(cmd, args...)
+
+		c.Stdin = in
+		c.Stdout = out
+		c.Stderr = err
+
+		return c.Run()
 	}
 }

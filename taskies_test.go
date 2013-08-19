@@ -20,12 +20,12 @@ func test(contents []byte, in io.Reader) ([]byte, []byte, error) {
 	err := bytes.NewBuffer([]byte{})
 	ts := taskies.NewTaskSet()
 	e := taskies.DecodeYAML(contents, ts)
-	run := taskies.NewRunner(ts.Tasks, taskies.NewEnv(), in, out, err)
 
 	if e != nil {
 		return nil, nil, e
 	}
 
+	run := taskies.NewRunner(ts.Tasks, ts.Env, in, out, err)
 	e = run.RunAll()
 
 	if e != nil {
@@ -132,5 +132,27 @@ env:
 
 	if v != "value" {
 		t.Fatalf("Expecting \"value\", found \"%s\"", v)
+	}
+}
+
+func TestTemplate(t *testing.T) {
+	yaml := []byte(`
+env:
+    val: 10
+tasks:
+    - name: test
+      shell: echo {{val}}
+`)
+
+	out, _, e := test(yaml, nil)
+
+	if e != nil {
+		t.Fatal(e.Error())
+	}
+
+	str := strings.TrimSpace(string(out))
+
+	if strings.TrimSpace(str) != "10" {
+		t.Errorf("Expecting \"10\" found \"%s\"", str)
 	}
 }

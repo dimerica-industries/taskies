@@ -129,7 +129,7 @@ func decodeEnv(val reflect.Value, ts *TaskSet) error {
 	keys := val.MapKeys()
 
 	for _, k := range keys {
-		ts.Env.Set(k.Elem().String(), val.MapIndex(k).Elem().String())
+		ts.Env.Set(k.Elem().String(), fmt.Sprintf("%v", val.MapIndex(k).Elem().Interface()))
 	}
 
 	return nil
