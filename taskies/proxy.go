@@ -6,18 +6,9 @@ import (
 )
 
 type ProxyTask struct {
-	name        string
-	description string
-	task        Task
-	data        interface{}
-}
-
-func (t *ProxyTask) Name() string {
-	return t.name
-}
-
-func (t *ProxyTask) Description() string {
-	return t.description
+	*baseTask
+	task Task
+	data interface{}
 }
 
 func (t *ProxyTask) Run(ctxt *RunContext) error {
@@ -40,10 +31,9 @@ func (t *ProxyTask) Run(ctxt *RunContext) error {
 func proxyProviderFunc(t Task) provider {
 	return func(ps providerSet, data *taskData) (Task, error) {
 		return &ProxyTask{
-			name:        data.name,
-			description: data.description,
-			data:        data.data,
-			task:        t,
+			baseTask: baseTaskFromTaskData(data),
+			data:     data.data,
+			task:     t,
 		}, nil
 	}
 }

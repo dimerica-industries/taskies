@@ -7,18 +7,9 @@ import (
 )
 
 type ShellTask struct {
-	name        string
-	description string
-	cmd         string
-	args        []string
-}
-
-func (t *ShellTask) Name() string {
-	return t.name
-}
-
-func (t *ShellTask) Description() string {
-	return t.description
+	*baseTask
+	cmd  string
+	args []string
 }
 
 func (t *ShellTask) Run(ctxt *RunContext) error {
@@ -47,9 +38,8 @@ func shellProvider(ps providerSet, data *taskData) (Task, error) {
 	}
 
 	return &ShellTask{
-		name:        data.name,
-		description: data.description,
-		cmd:         "sh",
-		args:        []string{"-c", val.String()},
+		baseTask: baseTaskFromTaskData(data),
+		cmd:      "sh",
+		args:     []string{"-c", val.String()},
 	}, nil
 }

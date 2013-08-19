@@ -7,17 +7,8 @@ import (
 )
 
 type PipeTask struct {
-	name        string
-	description string
-	tasks       []Task
-}
-
-func (t *PipeTask) Name() string {
-	return t.name
-}
-
-func (t *PipeTask) Description() string {
-	return t.description
+	*baseTask
+	tasks []Task
 }
 
 func (t *PipeTask) Run(ctxt *RunContext) error {
@@ -92,8 +83,7 @@ func pipeProvider(ps providerSet, data *taskData) (Task, error) {
 	}
 
 	return &PipeTask{
-		name:        data.name,
-		description: data.description,
-		tasks:       tasks,
+		baseTask: baseTaskFromTaskData(data),
+		tasks:    tasks,
 	}, nil
 }

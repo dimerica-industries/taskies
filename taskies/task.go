@@ -1,7 +1,7 @@
 package taskies
 
 import (
-    "bytes"
+	"bytes"
 	"fmt"
 	"io"
 )
@@ -10,6 +10,25 @@ type Task interface {
 	Name() string
 	Description() string
 	Run(*RunContext) error
+	EnvSet() map[string]string
+}
+
+type baseTask struct {
+	name        string
+	description string
+	envSet      map[string]string
+}
+
+func (t *baseTask) Name() string {
+	return t.name
+}
+
+func (t *baseTask) Description() string {
+	return t.description
+}
+
+func (t *baseTask) EnvSet() map[string]string {
+	return t.envSet
 }
 
 type RunContext struct {
@@ -24,22 +43,30 @@ func (c *RunContext) Run(t Task) error {
 	ctxt.Env = ctxt.Env.Child()
 	Debugf("[task] [%s]", t.Name())
 
-    out := new(bytes.Buffer)
-    er := new(bytes.Buffer)
+	out := new(bytes.Buffer)
+	er := new(bytes.Buffer)
 
-    ctxt.Out = io.MultiWriter(ctxt.Out, out)
-    ctxt.Err = io.MultiWriter(ctxt.Err, er)
+	ctxt.Out = io.MultiWriter(ctxt.Out, out)
+	ctxt.Err = io.MultiWriter(ctxt.Err, er)
 
-    err := t.Run(ctxt)
+	err := t.Run(ctxt)
 
-    c.Env.Set("$result.stdout", string(out.Bytes()))
-    c.Env.Set("$result.stderr", string(er.Bytes()))
+	c.Env.Set("$result.stdout", string(out.Bytes()))
+	c.Env.Set("$result.stderr", string(er.Bytes()))
 
-    if err != nil {
-        c.Env.Set("$result.error", err.Error())
-    }
+	if err != nil {
+		c.Env.Set("$result.error", err.Error())
+	}
 
-    return err
+	set := t.EnvSet()
+
+	if set != nil {
+		for k, v := range set {
+			c.Env.Set(k, v)
+		}
+	}
+
+	return err
 }
 
 func (c *RunContext) Clone() *RunContext {

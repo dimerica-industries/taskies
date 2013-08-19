@@ -186,3 +186,28 @@ tasks:
 		t.Errorf("Expecting \"10bleh10\" found \"%s\"", str)
 	}
 }
+
+func TestCustomSet(t *testing.T) {
+	yaml := []byte(`
+tasks:
+    - name: test1
+      shell: echo 10 > /dev/null
+      set:
+        OMG: WE DID IT
+
+    - name: test2
+      shell: bash -c "echo -n {{OMG}}"
+`)
+
+	out, _, e := test(yaml, nil)
+
+	if e != nil {
+		t.Fatal(e.Error())
+	}
+
+	str := strings.TrimSpace(string(out))
+
+	if strings.TrimSpace(str) != "WE DID IT" {
+		t.Errorf("Expecting \"WE DID IT\" found \"%s\"", str)
+	}
+}

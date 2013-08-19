@@ -9,7 +9,16 @@ import (
 type taskData struct {
 	name        string
 	description string
+	envset      map[string]string
 	data        interface{}
+}
+
+func baseTaskFromTaskData(td *taskData) *baseTask {
+	return &baseTask{
+		name:        td.name,
+		description: td.description,
+		envSet:      td.envset,
+	}
 }
 
 type provider func(providerSet, *taskData) (Task, error)
@@ -23,7 +32,7 @@ func (ps providerSet) provide(data interface{}) (Task, error) {
 	}
 
 	keys := val.MapKeys()
-	td := &taskData{}
+	td := &taskData{envset: make(map[string]string)}
 	task := ""
 
 	for _, k := range keys {
@@ -35,6 +44,20 @@ func (ps providerSet) provide(data interface{}) (Task, error) {
 			td.name = v.String()
 		case "description":
 			td.description = v.String()
+		case "set":
+			if v.Kind() != reflect.Map {
+				return nil, fmt.Errorf("set section must be a map, %s found", v.Kind())
+			}
+
+			skeys := v.MapKeys()
+
+			for _, sk := range skeys {
+				sv := v.MapIndex(sk).Elem().String()
+				sks := sk.Elem().String()
+
+				td.envset[sks] = sv
+			}
+
 		default:
 			task = ks
 			td.data = v.Interface()

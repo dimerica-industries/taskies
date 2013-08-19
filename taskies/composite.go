@@ -6,17 +6,8 @@ import (
 )
 
 type CompositeTask struct {
-	name        string
-	description string
-	tasks       []Task
-}
-
-func (t *CompositeTask) Name() string {
-	return t.name
-}
-
-func (t *CompositeTask) Description() string {
-	return t.description
+	*baseTask
+	tasks []Task
 }
 
 func (t *CompositeTask) Run(ctxt *RunContext) error {
@@ -50,8 +41,7 @@ func compositeProvider(ps providerSet, data *taskData) (Task, error) {
 	}
 
 	return &CompositeTask{
-		name:        data.name,
-		description: data.description,
-		tasks:       tasks,
+		baseTask: baseTaskFromTaskData(data),
+		tasks:    tasks,
 	}, nil
 }
