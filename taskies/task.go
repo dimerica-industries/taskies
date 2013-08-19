@@ -5,7 +5,18 @@ import (
 	"io"
 )
 
-type Task func(env *Env, in io.Reader, out, err io.Writer) error
+type Task interface {
+	Name() string
+	Description() string
+	Run(env *Env, in io.Reader, out, err io.Writer) error
+}
+
+func run(t Task, env *Env, in io.Reader, out, err io.Writer) error {
+	env = env.Child()
+	Debugf("[task] [%s]", t.Name())
+
+	return t.Run(env, in, out, err)
+}
 
 func NewRunner(tasks map[string]Task, env *Env, in io.Reader, out, err io.Writer) *Runner {
 	return &Runner{
@@ -27,9 +38,7 @@ type Runner struct {
 
 func (r *Runner) RunAll() error {
 	for _, t := range r.tasks {
-		env := r.env.Child()
-
-		if err := t(env, r.in, r.out, r.err); err != nil {
+		if err := run(t, r.env, r.in, r.out, r.err); err != nil {
 			return err
 		}
 	}
@@ -45,9 +54,7 @@ func (r *Runner) Run(tasks ...string) error {
 			return fmt.Errorf("Missing task %s", t)
 		}
 
-		env := r.env.Child()
-
-		if err := task(env, r.in, r.out, r.err); err != nil {
+		if err := run(task, r.env, r.in, r.out, r.err); err != nil {
 			return err
 		}
 	}

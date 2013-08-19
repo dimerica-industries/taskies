@@ -6,20 +6,32 @@ import (
 	"reflect"
 )
 
-func CompositeTask(tasks ...Task) Task {
-	return func(env *Env, in io.Reader, out, err io.Writer) error {
-		for _, t := range tasks {
-			if e := t(env.Child(), in, out, err); e != nil {
-				return e
-			}
-		}
-
-		return nil
-	}
+type CompositeTask struct {
+	name        string
+	description string
+	tasks       []Task
 }
 
-func compositeProvider(ps providerSet, data interface{}) (Task, error) {
-	val := reflect.ValueOf(data)
+func (t *CompositeTask) Name() string {
+	return t.name
+}
+
+func (t *CompositeTask) Description() string {
+	return t.description
+}
+
+func (t *CompositeTask) Run(env *Env, in io.Reader, out, err io.Writer) error {
+	for _, t := range t.tasks {
+		if e := run(t, env, in, out, err); e != nil {
+			return e
+		}
+	}
+
+	return nil
+}
+
+func compositeProvider(ps providerSet, data *taskData) (Task, error) {
+	val := reflect.ValueOf(data.data)
 
 	if val.Kind() != reflect.Slice {
 		return nil, fmt.Errorf("CompositeProvider expects slice, %s found", val.Kind())
@@ -35,8 +47,12 @@ func compositeProvider(ps providerSet, data interface{}) (Task, error) {
 			return nil, err
 		}
 
-		tasks[i] = task.task
+		tasks[i] = task
 	}
 
-	return CompositeTask(tasks...), nil
+	return &CompositeTask{
+		name:        data.name,
+		description: data.description,
+		tasks:       tasks,
+	}, nil
 }

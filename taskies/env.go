@@ -36,16 +36,6 @@ func (e *Env) Set(k string, v string) {
 	e.vals[k] = template(v, e)
 }
 
-func (e *Env) template(v string) string {
-	v = template(v, e)
-
-	if e.IsRoot() {
-		return v
-	}
-
-	return e.Parent().template(v)
-}
-
 func (e *Env) IsRoot() bool {
 	return e.parent == nil
 }
@@ -67,20 +57,4 @@ func (e *Env) Child() *Env {
 	e2.parent = e
 
 	return e2
-}
-
-func MergeEnv(one Env, others ...Env) *Env {
-	env := NewEnv()
-
-	for k, v := range one.vals {
-		env.vals[k] = v
-	}
-
-	for _, env2 := range others {
-		for k, v := range env2.vals {
-			env.vals[k] = v
-		}
-	}
-
-	return env
 }

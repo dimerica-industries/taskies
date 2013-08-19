@@ -6,15 +6,16 @@ import (
 	"reflect"
 )
 
-type namedTask struct {
-	name string
-	task Task
+type taskData struct {
+	name        string
+	description string
+	data        interface{}
 }
 
-type provider func(providerSet, interface{}) (Task, error)
+type provider func(providerSet, *taskData) (Task, error)
 type providerSet map[string]provider
 
-func (ps providerSet) provide(data interface{}) (*namedTask, error) {
+func (ps providerSet) provide(data interface{}) (Task, error) {
 	val := reflect.ValueOf(data)
 
 	if val.Kind() != reflect.Map {
@@ -22,12 +23,8 @@ func (ps providerSet) provide(data interface{}) (*namedTask, error) {
 	}
 
 	keys := val.MapKeys()
-
-	var (
-		name     string
-		task     string
-		contents interface{}
-	)
+    td := &taskData{}
+    task := ""
 
 	for _, k := range keys {
 		v := val.MapIndex(k).Elem()
@@ -35,10 +32,12 @@ func (ps providerSet) provide(data interface{}) (*namedTask, error) {
 
 		switch ks {
 		case "name":
-			name = v.String()
+			td.name = v.String()
+        case "description":
+            td.description = v.String()
 		default:
 			task = ks
-			contents = v.Interface()
+			td.data = v.Interface()
 		}
 	}
 
@@ -52,16 +51,13 @@ func (ps providerSet) provide(data interface{}) (*namedTask, error) {
 		return nil, fmt.Errorf("No task named \"%s\" found", task)
 	}
 
-	t, err := prov(ps, contents)
+	t, err := prov(ps, td)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &namedTask{
-		name: name,
-		task: t,
-	}, nil
+	return t, nil
 }
 
 func NewTaskSet() *TaskSet {
@@ -163,12 +159,12 @@ func decodeTask(val reflect.Value, ts *TaskSet) error {
 		return err
 	}
 
-	if t.name == "" {
+	if t.Name() == "" {
 		return fmt.Errorf("No name found")
 	}
 
-	ts.Tasks[t.name] = t.task
-	ts.providers[t.name] = proxyProviderFunc(t.task)
+	ts.Tasks[t.Name()] = t
+	ts.providers[t.Name()] = proxyProviderFunc(t)
 
 	return nil
 }

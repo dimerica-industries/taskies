@@ -43,7 +43,7 @@ func test(contents []byte, in io.Reader, tasks ...string) ([]byte, []byte, error
 func TestShell(t *testing.T) {
 	yaml := []byte(`
 tasks:
-    - name: test
+    - name: test shell
       shell: echo 3
 `)
 
@@ -61,7 +61,7 @@ tasks:
 func TestPipe(t *testing.T) {
 	yaml := []byte(`
 tasks:
-    - name: test
+    - name: test pipe
       pipe:
           - shell: echo 3
           - shell: cat
@@ -81,7 +81,7 @@ tasks:
 func TestMultiple(t *testing.T) {
 	yaml := []byte(`
 tasks:
-    - name: test
+    - name: test multiple
       tasks:
         - shell: bash -c "echo -n 10"
         - shell: bash -c "echo -n 3"
@@ -104,12 +104,12 @@ func TestCustom(t *testing.T) {
 tasks:
     - name: test
       shell: bash -c "echo {{val}}"
-    - name: test2
+    - name: test custom
       test: 
         val: 100
 `)
 
-	out, _, e := test(yaml, nil, "test2")
+	out, _, e := test(yaml, nil, "test custom")
 
 	if e != nil {
 		t.Fatal(e)
@@ -147,7 +147,7 @@ env:
     val: 10
     val2: wtf_{{val}}
 tasks:
-    - name: test
+    - name: test template
       shell: echo {{val2}}
 `)
 
