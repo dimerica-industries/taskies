@@ -25,6 +25,7 @@ func ShellTask(cmd string, args []string) Task {
 			args[i] = template(a, env)
 		}
 
+        Debugf("[SHELL] %s %s", cmd, args)
 		c := exec.Command(cmd, args...)
 
 		c.Stdin = in
