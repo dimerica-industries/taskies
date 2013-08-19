@@ -2,7 +2,6 @@ package taskies
 
 import (
 	"fmt"
-	"io"
 	"reflect"
 )
 
@@ -20,9 +19,9 @@ func (t *CompositeTask) Description() string {
 	return t.description
 }
 
-func (t *CompositeTask) Run(env *Env, in io.Reader, out, err io.Writer) error {
+func (t *CompositeTask) Run(ctxt *RunContext) error {
 	for _, t := range t.tasks {
-		if e := run(t, env, in, out, err); e != nil {
+		if e := ctxt.Run(t); e != nil {
 			return e
 		}
 	}

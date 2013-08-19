@@ -8,37 +8,53 @@ import (
 type Task interface {
 	Name() string
 	Description() string
-	Run(env *Env, in io.Reader, out, err io.Writer) error
+	Run(*RunContext) error
 }
 
-func run(t Task, env *Env, in io.Reader, out, err io.Writer) error {
-	env = env.Child()
+type RunContext struct {
+	Env *Env
+	In  io.Reader
+	Out io.Writer
+	Err io.Writer
+}
+
+func (c *RunContext) Run(t Task) error {
+	ctxt := c.Clone()
+	ctxt.Env = ctxt.Env.Child()
 	Debugf("[task] [%s]", t.Name())
 
-	return t.Run(env, in, out, err)
+	return t.Run(ctxt)
+}
+
+func (c *RunContext) Clone() *RunContext {
+	return &RunContext{
+		Env: c.Env,
+		In:  c.In,
+		Out: c.Out,
+		Err: c.Err,
+	}
 }
 
 func NewRunner(tasks map[string]Task, env *Env, in io.Reader, out, err io.Writer) *Runner {
 	return &Runner{
 		tasks: tasks,
-		env:   env,
-		in:    in,
-		out:   out,
-		err:   err,
+		context: &RunContext{
+			Env: env,
+			In:  in,
+			Out: out,
+			Err: err,
+		},
 	}
 }
 
 type Runner struct {
-	tasks map[string]Task
-	env   *Env
-	in    io.Reader
-	out   io.Writer
-	err   io.Writer
+	tasks   map[string]Task
+	context *RunContext
 }
 
 func (r *Runner) RunAll() error {
 	for _, t := range r.tasks {
-		if err := run(t, r.env, r.in, r.out, r.err); err != nil {
+		if err := r.context.Run(t); err != nil {
 			return err
 		}
 	}
@@ -54,7 +70,7 @@ func (r *Runner) Run(tasks ...string) error {
 			return fmt.Errorf("Missing task %s", t)
 		}
 
-		if err := run(task, r.env, r.in, r.out, r.err); err != nil {
+		if err := r.context.Run(task); err != nil {
 			return err
 		}
 	}

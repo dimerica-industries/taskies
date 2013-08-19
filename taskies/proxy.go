@@ -2,7 +2,6 @@ package taskies
 
 import (
 	"fmt"
-	"io"
 	"reflect"
 )
 
@@ -21,7 +20,7 @@ func (t *ProxyTask) Description() string {
 	return t.description
 }
 
-func (t *ProxyTask) Run(env *Env, in io.Reader, out, err io.Writer) error {
+func (t *ProxyTask) Run(ctxt *RunContext) error {
 	val := reflect.ValueOf(t.data)
 
 	if val.Kind() == reflect.Map {
@@ -31,11 +30,11 @@ func (t *ProxyTask) Run(env *Env, in io.Reader, out, err io.Writer) error {
 			ks := k.Elem().String()
 			vs := fmt.Sprintf("%v", val.MapIndex(k).Elem().Interface())
 
-			env.Set(ks, vs)
+			ctxt.Env.Set(ks, vs)
 		}
 	}
 
-	return run(t.task, env, in, out, err)
+	return ctxt.Run(t.task)
 }
 
 func proxyProviderFunc(t Task) provider {

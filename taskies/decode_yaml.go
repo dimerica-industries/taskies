@@ -23,8 +23,8 @@ func (ps providerSet) provide(data interface{}) (Task, error) {
 	}
 
 	keys := val.MapKeys()
-    td := &taskData{}
-    task := ""
+	td := &taskData{}
+	task := ""
 
 	for _, k := range keys {
 		v := val.MapIndex(k).Elem()
@@ -33,8 +33,8 @@ func (ps providerSet) provide(data interface{}) (Task, error) {
 		switch ks {
 		case "name":
 			td.name = v.String()
-        case "description":
-            td.description = v.String()
+		case "description":
+			td.description = v.String()
 		default:
 			task = ks
 			td.data = v.Interface()

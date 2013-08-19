@@ -20,9 +20,10 @@ func (t *PipeTask) Description() string {
 	return t.description
 }
 
-func (t *PipeTask) Run(env *Env, in io.Reader, out, err io.Writer) error {
+func (t *PipeTask) Run(ctxt *RunContext) error {
 	ch := make(chan error)
 	l := len(t.tasks)
+	in := ctxt.In
 
 	for i, t := range t.tasks {
 		var (
@@ -31,14 +32,18 @@ func (t *PipeTask) Run(env *Env, in io.Reader, out, err io.Writer) error {
 		)
 
 		if i == l-1 {
-			pr = in
-			pw = out
+			pr = ctxt.In
+			pw = ctxt.Out
 		} else {
 			pr, pw = io.Pipe()
 		}
 
 		go func(t Task, in io.Reader, out io.Writer) {
-			err := run(t, env, in, out, err)
+			ctxt = ctxt.Clone()
+			ctxt.In = in
+			ctxt.Out = out
+
+			err := ctxt.Run(t)
 
 			if c, ok := out.(io.Closer); ok {
 				c.Close()

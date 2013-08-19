@@ -2,7 +2,6 @@ package taskies
 
 import (
 	"fmt"
-	"io"
 	"os/exec"
 	"reflect"
 )
@@ -22,20 +21,20 @@ func (t *ShellTask) Description() string {
 	return t.description
 }
 
-func (t *ShellTask) Run(env *Env, in io.Reader, out, err io.Writer) error {
-	cmd := template(t.cmd, env)
+func (t *ShellTask) Run(ctxt *RunContext) error {
+	cmd := template(t.cmd, ctxt.Env)
 	args := t.args
 
 	for i, a := range args {
-		args[i] = template(a, env)
+		args[i] = template(a, ctxt.Env)
 	}
 
 	Debugf("[SHELL] %s %s", cmd, args)
 	c := exec.Command(cmd, args...)
 
-	c.Stdin = in
-	c.Stdout = out
-	c.Stderr = err
+	c.Stdin = ctxt.In
+	c.Stdout = ctxt.Out
+	c.Stderr = ctxt.Err
 
 	return c.Run()
 }
