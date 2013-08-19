@@ -11,7 +11,7 @@ import (
 
 var x = fmt.Println
 
-func test(contents []byte, in io.Reader) ([]byte, []byte, error) {
+func test(contents []byte, in io.Reader, tasks ...string) ([]byte, []byte, error) {
 	if in != nil {
 		in = bytes.NewBuffer([]byte{})
 	}
@@ -26,7 +26,12 @@ func test(contents []byte, in io.Reader) ([]byte, []byte, error) {
 	}
 
 	run := taskies.NewRunner(ts.Tasks, ts.Env, in, out, err)
-	e = run.RunAll()
+
+	if len(tasks) == 0 {
+		e = run.RunAll()
+	} else {
+		e = run.Run(tasks...)
+	}
 
 	if e != nil {
 		return nil, nil, e
@@ -98,12 +103,13 @@ func TestCustom(t *testing.T) {
 	yaml := []byte(`
 tasks:
     - name: test
-      shell: bash -c "echo -n 10"
+      shell: bash -c "echo {{val}}"
     - name: test2
-      test: doit
+      test: 
+        val: 100
 `)
 
-	out, _, e := test(yaml, nil)
+	out, _, e := test(yaml, nil, "test2")
 
 	if e != nil {
 		t.Fatal(e)
@@ -111,8 +117,8 @@ tasks:
 
 	str := strings.TrimSpace(string(out))
 
-	if strings.TrimSpace(str) != "1010" {
-		t.Errorf("Expecting \"1010\" found \"%s\"", str)
+	if strings.TrimSpace(str) != "100" {
+		t.Errorf("Expecting \"100\" found \"%s\"", str)
 	}
 }
 

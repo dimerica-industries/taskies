@@ -129,7 +129,10 @@ func decodeEnv(val reflect.Value, ts *TaskSet) error {
 	keys := val.MapKeys()
 
 	for _, k := range keys {
-		ts.Env.Set(k.Elem().String(), fmt.Sprintf("%v", val.MapIndex(k).Elem().Interface()))
+		ks := k.Elem().String()
+		vs := fmt.Sprintf("%v", val.MapIndex(k).Elem().Interface())
+
+		ts.Env.Set(ks, vs)
 	}
 
 	return nil
@@ -165,9 +168,7 @@ func decodeTask(val reflect.Value, ts *TaskSet) error {
 	}
 
 	ts.Tasks[t.name] = t.task
-	ts.providers[t.name] = func(ps providerSet, data interface{}) (Task, error) {
-		return t.task, nil
-	}
+	ts.providers[t.name] = proxyProviderFunc(t.task)
 
 	return nil
 }
