@@ -37,7 +37,8 @@ func main() {
 
 	files := &ArrayOpts{}
 	flag.Var(files, "f", "")
-	help := flag.Bool("h", false, "")
+	help := flag.Bool("h", false, "Show help")
+	list := flag.Bool("l", false, "List all available tasks")
 
 	flag.Parse()
 
@@ -47,7 +48,7 @@ func main() {
 		*files = ArrayOpts{DEFAULT_FILE}
 	}
 
-	if len(tasks) == 0 || *help {
+	if *help {
 		flag.Usage()
 		os.Exit(0)
 	}
@@ -66,6 +67,20 @@ func main() {
 		if err != nil {
 			panic("YAML decode error: " + err.Error())
 		}
+	}
+
+	if *list {
+		fmt.Printf("Tasks:\n")
+		for name, _ := range ts.Tasks {
+			fmt.Printf("  - %s\n", name)
+		}
+
+		os.Exit(0)
+	}
+
+	if len(tasks) == 0 {
+		flag.Usage()
+		os.Exit(1)
 	}
 
 	runner := taskies.NewRunner(ts.Tasks, ts.Env, os.Stdin, os.Stdout, os.Stderr)
