@@ -139,9 +139,10 @@ func TestTemplate(t *testing.T) {
 	yaml := []byte(`
 env:
     val: 10
+    val2: wtf_{{val}}
 tasks:
     - name: test
-      shell: echo {{val}}
+      shell: echo {{val2}}
 `)
 
 	out, _, e := test(yaml, nil)
@@ -152,7 +153,7 @@ tasks:
 
 	str := strings.TrimSpace(string(out))
 
-	if strings.TrimSpace(str) != "10" {
-		t.Errorf("Expecting \"10\" found \"%s\"", str)
+	if strings.TrimSpace(str) != "wtf_10" {
+		t.Errorf("Expecting \"wtf_10\" found \"%s\"", str)
 	}
 }

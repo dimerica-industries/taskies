@@ -45,7 +45,7 @@ func (e *Env) Set(k string, v string) {
 	e.l.Lock()
 	defer e.l.Unlock()
 
-	e.vals[k] = v
+	e.vals[k] = template(v, e)
 }
 
 func (v Env) Array() []string {
