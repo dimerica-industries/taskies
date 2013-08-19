@@ -27,7 +27,9 @@ type Runner struct {
 
 func (r *Runner) RunAll() error {
 	for _, t := range r.tasks {
-		if err := t(r.env, r.in, r.out, r.err); err != nil {
+		env := r.env.Child()
+
+		if err := t(env, r.in, r.out, r.err); err != nil {
 			return err
 		}
 	}
@@ -43,7 +45,9 @@ func (r *Runner) Run(tasks ...string) error {
 			return fmt.Errorf("Missing task %s", t)
 		}
 
-		if err := task(r.env, r.in, r.out, r.err); err != nil {
+		env := r.env.Child()
+
+		if err := task(env, r.in, r.out, r.err); err != nil {
 			return err
 		}
 	}

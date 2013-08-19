@@ -48,7 +48,7 @@ func PipeTask(tasks ...Task) Task {
 			}
 
 			go func(t Task, in io.Reader, out io.Writer) {
-				err := t(env, in, out, err)
+				err := t(env.Child(), in, out, err)
 
 				if c, ok := out.(io.Closer); ok {
 					c.Close()

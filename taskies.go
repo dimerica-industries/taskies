@@ -6,6 +6,7 @@ import (
 	"github.com/dimerica-industries/taskies/taskies"
 	"io/ioutil"
 	"os"
+	"runtime/debug"
 )
 
 const (
@@ -27,6 +28,9 @@ func main() {
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Printf("Error: %s\n", err)
+			taskies.Debug(func() {
+				debug.PrintStack()
+			})
 			os.Exit(1)
 		}
 	}()

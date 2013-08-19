@@ -9,7 +9,7 @@ import (
 func CompositeTask(tasks ...Task) Task {
 	return func(env *Env, in io.Reader, out, err io.Writer) error {
 		for _, t := range tasks {
-			if e := t(env, in, out, err); e != nil {
+			if e := t(env.Child(), in, out, err); e != nil {
 				return e
 			}
 		}
