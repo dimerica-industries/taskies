@@ -1,6 +1,7 @@
 package src
 
 import (
+    "fmt"
     "reflect"
     "strconv"
     "strings"
@@ -19,11 +20,27 @@ type Env struct {
 	vals   map[string]interface{}
 }
 
+func (e *Env) Id() string {
+    id := fmt.Sprintf("%p", e)
+
+    if e.IsRoot() {
+        return id
+    }
+
+    return e.Parent().Id() + "." + id
+}
+
 func (e *Env) Get(k string) interface{} {
 	e.l.Lock()
 	defer e.l.Unlock()
 
-    return e.get(k)
+    v := e.get(k)
+
+    if v != nil || e.IsRoot() {
+        return v
+    }
+
+    return e.Parent().get(k)
 }
 
 func (e *Env) get(k string) interface{} {
@@ -68,7 +85,7 @@ func (e *Env) Set(k string, v interface{}) {
 }
 
 func (e *Env) set(k string, v interface{}) {
-    Debugf("[ENV SET] %s = %#v", k, v)
+    Debugf("[ENV SET] %s %s = %#v", e.Id(), k, v)
     k = template(k, e).(string)
     v = template(v, e)
     rv := reflect.ValueOf(v)
@@ -101,4 +118,27 @@ func (e *Env) set(k string, v interface{}) {
             cur = v
         }
     }
+}
+
+func (e *Env) IsRoot() bool {
+    return e.parent == nil
+}
+
+func (e *Env) Parent() *Env {
+    return e.parent
+}
+
+func (e *Env) Root() *Env {
+    if e.IsRoot() {
+        return e
+    }
+
+    return e.Parent().Root()
+}
+
+func (e *Env) Child() *Env {
+    e2 := NewEnv()
+    e2.parent = e
+
+    return e2
 }

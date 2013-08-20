@@ -11,6 +11,10 @@ type ProxyTask struct {
 	data interface{}
 }
 
+func (t *ProxyTask) ChildEnv() bool {
+    return false
+}
+
 func (t *ProxyTask) Run(ctxt *RunContext) error {
 	val := reflect.ValueOf(t.data)
 

@@ -11,6 +11,7 @@ type Task interface {
 	Description() string
 	Run(*RunContext) error
 	EnvSet() map[string]interface{}
+    ChildEnv() bool
 }
 
 type baseTask struct {
@@ -31,6 +32,10 @@ func (t *baseTask) EnvSet() map[string]interface{} {
 	return t.envSet
 }
 
+func (t *baseTask) ChildEnv() bool {
+    return true
+}
+
 type RunContext struct {
 	Env *Env
 	In  io.Reader
@@ -39,14 +44,19 @@ type RunContext struct {
 }
 
 func (c *RunContext) Run(t Task) error {
-	ctxt := c.Clone()
-	Debugf("[task] [%s]", t.Name())
-
 	out := new(bytes.Buffer)
 	er := new(bytes.Buffer)
 
+	ctxt := c.Clone()
+
+    if t.ChildEnv() {
+        ctxt.Env = ctxt.Env.Child()
+    }
+
 	ctxt.Out = io.MultiWriter(ctxt.Out, out)
 	ctxt.Err = io.MultiWriter(ctxt.Err, er)
+
+	Debugf("[task] [%s] [env=%s]", t.Name(), ctxt.Env.Id())
 
 	err := t.Run(ctxt)
 

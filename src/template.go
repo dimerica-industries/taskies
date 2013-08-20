@@ -40,5 +40,12 @@ func template(tmpl interface{}, env *Env) interface{} {
         str = fmt.Sprintf("%v", tmpl)
     }
 
-	return mustache.Render(str, env.vals)
+    ctxt := []interface{}{env.vals}
+
+    for !env.IsRoot() {
+        env = env.Parent()
+        ctxt = append(ctxt, env.vals)
+    }
+
+	return mustache.Render(str, ctxt...)
 }
