@@ -1,4 +1,4 @@
-package taskies
+package src
 
 import (
     "reflect"

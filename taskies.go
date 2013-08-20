@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/dimerica-industries/taskies/taskies"
+    taskies "github.com/dimerica-industries/taskies/src"
 	"io/ioutil"
 	"os"
 	"runtime/debug"

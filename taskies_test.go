@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/dimerica-industries/taskies/taskies"
+	taskies "github.com/dimerica-industries/taskies/src"
 	"io"
 	"strings"
 	"testing"
