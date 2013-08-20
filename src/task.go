@@ -10,13 +10,13 @@ type Task interface {
 	Name() string
 	Description() string
 	Run(*RunContext) error
-	EnvSet() map[string]interface{}
+	EnvSet() []map[string]interface{}
 }
 
 type baseTask struct {
 	name        string
 	description string
-	envSet      map[string]interface{}
+	envSet      []map[string]interface{}
 }
 
 func (t *baseTask) Name() string {
@@ -27,7 +27,7 @@ func (t *baseTask) Description() string {
 	return t.description
 }
 
-func (t *baseTask) EnvSet() map[string]interface{} {
+func (t *baseTask) EnvSet() []map[string]interface{} {
 	return t.envSet
 }
 
@@ -43,11 +43,11 @@ func (c *RunContext) Run(t Task) error {
 	er := new(bytes.Buffer)
 
 	ctxt := c.Clone()
-    ctxt.Env = ctxt.Env.Child()
+	ctxt.Env = ctxt.Env.Child()
 	ctxt.Out = io.MultiWriter(ctxt.Out, out)
 	ctxt.Err = io.MultiWriter(ctxt.Err, er)
 
-	Debugf("[task] [%s] [env=%s]", t.Name(), ctxt.Env.Id())
+	Debugf("[TASK] [name=%s] [env=%s]", t.Name(), ctxt.Env.Id())
 
 	err := t.Run(ctxt)
 
@@ -58,9 +58,9 @@ func (c *RunContext) Run(t Task) error {
 		c.Env.Set("$result.error", err.Error())
 	}
 
-	set := t.EnvSet()
+	sets := t.EnvSet()
 
-	if set != nil {
+	for _, set := range sets {
 		for k, v := range set {
 			c.Env.Set(k, v)
 		}

@@ -8,3 +8,6 @@ tasks:
 
   - name: install
     shell: go install -v github.com/dimerica-industries/taskies
+
+  - name: fmt
+    shell: go fmt ./...

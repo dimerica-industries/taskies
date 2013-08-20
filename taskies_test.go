@@ -40,86 +40,57 @@ func test(contents []byte, in io.Reader, tasks ...string) ([]byte, []byte, error
 	return out.Bytes(), err.Bytes(), nil
 }
 
-func TestShell(t *testing.T) {
-	yaml := []byte(`
-tasks:
-    - name: test shell
-      shell: echo 3
-`)
-
-	out, _, e := test(yaml, nil)
+func testEquals(t *testing.T, yaml []byte, str string, in io.Reader, tasks ...string) {
+	out, _, e := test(yaml, in, tasks...)
 
 	if e != nil {
 		t.Fatal(e)
 	}
 
-	if strings.TrimSpace(string(out)) != "3" {
-		t.Errorf("Expecting \"3\" found \"%s\"", string(out))
+	strout := strings.TrimSpace(string(out))
+
+	if strout != str {
+		t.Errorf("Expecting \"%s\" found \"%s\"", str, strout)
 	}
 }
 
+func TestShell(t *testing.T) {
+	testEquals(t, []byte(`
+tasks:
+    - name: test shell
+      shell: echo 3
+`), "3", nil)
+}
+
 func TestPipe(t *testing.T) {
-	yaml := []byte(`
+	testEquals(t, []byte(`
 tasks:
     - name: test pipe
       pipe:
           - shell: echo 3
           - shell: cat
-`)
-
-	out, _, e := test(yaml, nil)
-
-	if e != nil {
-		t.Fatal(e)
-	}
-
-	if strings.TrimSpace(string(out)) != "3" {
-		t.Errorf("Expecting \"3\" found \"%s\"", string(out))
-	}
+`), "3", nil)
 }
 
 func TestMultiple(t *testing.T) {
-	yaml := []byte(`
+	testEquals(t, []byte(`
 tasks:
     - name: test multiple
       tasks:
         - shell: bash -c "echo -n 10"
         - shell: bash -c "echo -n 3"
-`)
-	out, _, e := test(yaml, nil)
-
-	if e != nil {
-		t.Fatal(e)
-	}
-
-	str := strings.TrimSpace(string(out))
-
-	if strings.TrimSpace(str) != "103" {
-		t.Errorf("Expecting \"103\" found \"%s\"", str)
-	}
+`), "103", nil)
 }
 
 func TestCustom(t *testing.T) {
-	yaml := []byte(`
+	testEquals(t, []byte(`
 tasks:
     - name: test
       shell: bash -c "echo {{val}}"
     - name: test custom
       test: 
         val: 100
-`)
-
-	out, _, e := test(yaml, nil, "test custom")
-
-	if e != nil {
-		t.Fatal(e)
-	}
-
-	str := strings.TrimSpace(string(out))
-
-	if strings.TrimSpace(str) != "100" {
-		t.Errorf("Expecting \"100\" found \"%s\"", str)
-	}
+`), "100", nil, "test custom")
 }
 
 func TestDecodeEnv(t *testing.T) {
@@ -142,53 +113,29 @@ env:
 }
 
 func TestTemplate(t *testing.T) {
-	yaml := []byte(`
+	testEquals(t, []byte(`
 env:
     val: 10
     val2: wtf_{{val}}
 tasks:
     - name: test template
       shell: echo {{val2}}
-`)
-
-	out, _, e := test(yaml, nil)
-
-	if e != nil {
-		t.Fatal(e.Error())
-	}
-
-	str := strings.TrimSpace(string(out))
-
-	if strings.TrimSpace(str) != "wtf_10" {
-		t.Errorf("Expecting \"wtf_10\" found \"%s\"", str)
-	}
+`), "wtf_10", nil)
 }
 
 func TestResultSet(t *testing.T) {
-	yaml := []byte(`
+	testEquals(t, []byte(`
 tasks:
     - name: test1
       shell: bash -c "echo -n 10"
 
     - name: test2
       shell: bash -c "echo -n bleh{{$result.stdout}}"
-`)
-
-	out, _, e := test(yaml, nil)
-
-	if e != nil {
-		t.Fatal(e.Error())
-	}
-
-	str := strings.TrimSpace(string(out))
-
-	if strings.TrimSpace(str) != "10bleh10" {
-		t.Errorf("Expecting \"10bleh10\" found \"%s\"", str)
-	}
+`), "10bleh10", nil)
 }
 
 func TestCustomSet(t *testing.T) {
-	yaml := []byte(`
+	testEquals(t, []byte(`
 tasks:
     - name: test1
       shell: echo 10 > /dev/null
@@ -201,34 +148,56 @@ tasks:
       tasks:
         - test1
         - shell: bash -c "echo -n {{OMG}}"
+`), "WE DID IT", nil, "test2")
+}
 
-    - name: test3
+func TestCustomComplexSet(t *testing.T) {
+	testEquals(t, []byte(`
+tasks:
+    - name: test1
+      shell: echo 10 > /dev/null
+      set:
+        OMG: WE DID IT
+        complex:
+            OMG: WE DID IT
+
+    - name: test2
       tasks:
         - test1
         - shell: bash -c "echo -n {{complex.OMG}}"
-`)
+`), "WE DID IT", nil, "test2")
+}
 
-	out, _, e := test(yaml, nil, "test2")
+func TestCustomMerge(t *testing.T) {
+	testEquals(t, []byte(`
+tasks:
+    - name: test1
+      shell: echo 10 > /dev/null
+      set:
+        OMG: WE DID IT
+        complex:
+            OMG: WE DID IT
 
-	if e != nil {
-		t.Fatal(e.Error())
-	}
+    - name: test2
+      tasks:
+        - test1: 
+          set:
+            OMG: MAYBE NOT?
+        - shell: bash -c "echo -n {{OMG}}"
+`), "MAYBE NOT?", nil, "test2")
+}
 
-	str := strings.TrimSpace(string(out))
+func TestCustomScope(t *testing.T) {
+	testEquals(t, []byte(`
+tasks:
+    - name: test1
+      shell: echo {{hello}}
 
-	if strings.TrimSpace(str) != "WE DID IT" {
-		t.Errorf("Expecting \"WE DID IT\" found \"%s\"", str)
-	}
+    - name: test2
+      test1:
+        hello: 10
 
-	out, _, e = test(yaml, nil, "test3")
-
-	if e != nil {
-		t.Fatal(e.Error())
-	}
-
-	str = strings.TrimSpace(string(out))
-
-	if strings.TrimSpace(str) != "WE DID IT" {
-		t.Errorf("Expecting \"WE DID IT\" found \"%s\"", str)
-	}
+    - name: test3
+      test1: ds
+`), "10", nil, "test2", "test3")
 }

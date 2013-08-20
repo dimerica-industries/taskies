@@ -14,10 +14,10 @@ type ShellTask struct {
 
 func (t *ShellTask) Run(ctxt *RunContext) error {
 	cmd := template(t.cmd, ctxt.Env).(string)
-	args := t.args
+	args := make([]string, len(t.args))
 
-	for i, a := range args {
-		args[i] = template(a, ctxt.Env).(string)
+	for i, _ := range args {
+		args[i] = template(t.args[i], ctxt.Env).(string)
 	}
 
 	Debugf("[SHELL] %s %s", cmd, args)

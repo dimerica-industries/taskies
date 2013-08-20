@@ -17,7 +17,7 @@ func baseTaskFromTaskData(td *taskData) *baseTask {
 	return &baseTask{
 		name:        td.name,
 		description: td.description,
-		envSet:      td.envset,
+		envSet:      []map[string]interface{}{td.envset},
 	}
 }
 
@@ -25,13 +25,14 @@ type provider func(providerSet, *taskData) (Task, error)
 type providerSet map[string]provider
 
 func (ps providerSet) provide(data interface{}) (Task, error) {
+	Debugf("[PROVIDER] %v", data)
 	val := reflect.ValueOf(data)
 
-    if val.Kind() == reflect.String {
-        val = reflect.ValueOf(map[string]interface{}{
-            data.(string): nil,
-        })
-    }
+	if val.Kind() == reflect.String {
+		val = reflect.ValueOf(map[string]interface{}{
+			data.(string): nil,
+		})
+	}
 
 	if val.Kind() != reflect.Map {
 		return nil, fmt.Errorf("Expecting map, found %s", val.Kind())
@@ -67,9 +68,9 @@ func (ps providerSet) provide(data interface{}) (Task, error) {
 		default:
 			task = ks
 
-            if v.IsValid() {
-                td.data = v.Interface()
-            }
+			if v.IsValid() {
+				td.data = v.Interface()
+			}
 		}
 	}
 
@@ -114,7 +115,7 @@ func DecodeYAML(contents []byte, ts *TaskSet) error {
 	var data interface{}
 	err := goyaml.Unmarshal(contents, &data)
 
-    data = clean(data)
+	data = clean(data)
 
 	if err != nil {
 		return err
@@ -145,7 +146,7 @@ func DecodeYAML(contents []byte, ts *TaskSet) error {
 				return err
 			}
 		default:
-            return fmt.Errorf("Invalid key: %s", k.Elem().String())
+			return fmt.Errorf("Invalid key: %s", k.Elem().String())
 		}
 	}
 
@@ -205,24 +206,24 @@ func decodeTask(val reflect.Value, ts *TaskSet) error {
 }
 
 func clean(val interface{}) interface{} {
-    if m, ok := val.(map[interface{}]interface{}); ok {
-        m2 := make(map[string]interface{})
+	if m, ok := val.(map[interface{}]interface{}); ok {
+		m2 := make(map[string]interface{})
 
-        for k, v := range m {
-            ks := fmt.Sprintf("%v", k)
-            m2[ks] = clean(v)
-        }
+		for k, v := range m {
+			ks := fmt.Sprintf("%v", k)
+			m2[ks] = clean(v)
+		}
 
-        return m2
-    }
+		return m2
+	}
 
-    if sl, ok := val.([]interface{}); ok {
-        for i, v := range sl {
-            sl[i] = clean(v)
-        }
+	if sl, ok := val.([]interface{}); ok {
+		for i, v := range sl {
+			sl[i] = clean(v)
+		}
 
-        return sl
-    }
+		return sl
+	}
 
-    return fmt.Sprintf("%v", val)
+	return fmt.Sprintf("%v", val)
 }

@@ -14,6 +14,8 @@ type ProxyTask struct {
 func (t *ProxyTask) Run(ctxt *RunContext) error {
 	val := reflect.ValueOf(t.data)
 
+	Debugf("[PROXY TASK] %v", t.data)
+
 	if val.Kind() == reflect.Map {
 		keys := val.MapKeys()
 
@@ -28,13 +30,14 @@ func (t *ProxyTask) Run(ctxt *RunContext) error {
 	return t.task.Run(ctxt)
 }
 
-func (t *ProxyTask) EnvSet() map[string]interface{} {
-    //need to merge env
-    return t.task.EnvSet()
+func (t *ProxyTask) EnvSet() []map[string]interface{} {
+	return append(t.task.EnvSet(), t.baseTask.EnvSet()...)
 }
 
 func proxyProviderFunc(t Task) provider {
 	return func(ps providerSet, data *taskData) (Task, error) {
+		Debugf("[PROXY PROVIDER] %v", data)
+
 		return &ProxyTask{
 			baseTask: baseTaskFromTaskData(data),
 			data:     data.data,

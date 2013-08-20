@@ -1,45 +1,45 @@
 package src
 
 import (
-    "fmt"
-    "reflect"
-    "testing"
+	"fmt"
+	"reflect"
+	"testing"
 )
 
 var _ = fmt.Println
 
 func TestEnvBasicSet(t *testing.T) {
-    e := NewEnv()
-    e.Set("a", "b")
+	e := NewEnv()
+	e.Set("a", "b")
 
-    if e.Get("a") != "b" {
-        t.Errorf("expected \"b\", found %s", e.Get("a"))
-    }
+	if e.Get("a") != "b" {
+		t.Errorf("expected \"b\", found %s", e.Get("a"))
+	}
 }
 
 func TestEnvNestedSet(t *testing.T) {
-    e := NewEnv()
-    e.Set("a.b", "c")
+	e := NewEnv()
+	e.Set("a.b", "c")
 
-    if e.Get("a.b") != "c" {
-        t.Fatalf("expected \"c\", found %s", e.Get("a.b"))
-    }
+	if e.Get("a.b") != "c" {
+		t.Fatalf("expected \"c\", found %s", e.Get("a.b"))
+	}
 
-    e.Set("a.b.c", "d")
+	e.Set("a.b.c", "d")
 
-    r := reflect.ValueOf(e.Get("a.b"))
+	r := reflect.ValueOf(e.Get("a.b"))
 
-    if r.Kind() != reflect.Map {
-        t.Fatalf("expected type map, found %s", r.Kind())
-    }
+	if r.Kind() != reflect.Map {
+		t.Fatalf("expected type map, found %s", r.Kind())
+	}
 
-    e.Set("a.b.e", "f")
+	e.Set("a.b.e", "f")
 
-    if e.Get("a.b.c") != "d" {
-        t.Fatalf("expected \"d\", found %s", e.Get("a.b.c"))
-    }
+	if e.Get("a.b.c") != "d" {
+		t.Fatalf("expected \"d\", found %s", e.Get("a.b.c"))
+	}
 
-    if e.Get("a.b.e") != "f" {
-        t.Fatalf("expected \"f\", found %s", e.Get("a.b.e"))
-    }
+	if e.Get("a.b.e") != "f" {
+		t.Fatalf("expected \"f\", found %s", e.Get("a.b.e"))
+	}
 }
