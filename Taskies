@@ -2,7 +2,9 @@
 
 tasks:
   - name: test
-    shell: go test -v ./...
+    shell: |
+      go test -i ./...
+      go test -v ./...
 
   - name: install
     shell: go install -v github.com/dimerica-industries/taskies

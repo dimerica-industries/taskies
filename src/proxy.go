@@ -18,7 +18,7 @@ func (t *ProxyTask) Run(ctxt *RunContext) error {
 		keys := val.MapKeys()
 
 		for _, k := range keys {
-			ks := k.Elem().String()
+			ks := k.String()
 			vs := fmt.Sprintf("%v", val.MapIndex(k).Elem().Interface())
 
 			ctxt.Env.Set(ks, vs)

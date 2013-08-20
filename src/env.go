@@ -68,6 +68,7 @@ func (e *Env) Set(k string, v interface{}) {
 }
 
 func (e *Env) set(k string, v interface{}) {
+    Debugf("[ENV SET] %s = %#v", k, v)
     k = template(k, e).(string)
     v = template(v, e)
     rv := reflect.ValueOf(v)

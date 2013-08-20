@@ -194,18 +194,39 @@ tasks:
       shell: echo 10 > /dev/null
       set:
         OMG: WE DID IT
+        complex:
+            OMG: WE DID IT
 
     - name: test2
-      shell: bash -c "echo -n {{OMG}}"
+      tasks:
+        - test1
+        - shell: bash -c "echo -n {{OMG}}"
+
+    - name: test3
+      tasks:
+        - test1
+        - shell: bash -c "echo -n {{complex.OMG}}"
 `)
 
-	out, _, e := test(yaml, nil)
+	out, _, e := test(yaml, nil, "test2")
 
 	if e != nil {
 		t.Fatal(e.Error())
 	}
 
 	str := strings.TrimSpace(string(out))
+
+	if strings.TrimSpace(str) != "WE DID IT" {
+		t.Errorf("Expecting \"WE DID IT\" found \"%s\"", str)
+	}
+
+	out, _, e = test(yaml, nil, "test3")
+
+	if e != nil {
+		t.Fatal(e.Error())
+	}
+
+	str = strings.TrimSpace(string(out))
 
 	if strings.TrimSpace(str) != "WE DID IT" {
 		t.Errorf("Expecting \"WE DID IT\" found \"%s\"", str)

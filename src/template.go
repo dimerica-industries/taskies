@@ -20,7 +20,7 @@ func template(tmpl interface{}, env *Env) interface{} {
         for _, k := range keys {
             v := r.MapIndex(k)
             tk := template(k, env).(string)
-            tv := template(v, env)
+            tv := template(v.Interface(), env)
 
             m[tk] = tv
         }

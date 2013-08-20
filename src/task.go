@@ -10,13 +10,13 @@ type Task interface {
 	Name() string
 	Description() string
 	Run(*RunContext) error
-	EnvSet() map[string]string
+	EnvSet() map[string]interface{}
 }
 
 type baseTask struct {
 	name        string
 	description string
-	envSet      map[string]string
+	envSet      map[string]interface{}
 }
 
 func (t *baseTask) Name() string {
@@ -27,7 +27,7 @@ func (t *baseTask) Description() string {
 	return t.description
 }
 
-func (t *baseTask) EnvSet() map[string]string {
+func (t *baseTask) EnvSet() map[string]interface{} {
 	return t.envSet
 }
 
@@ -52,8 +52,6 @@ func (c *RunContext) Run(t Task) error {
 
 	c.Env.Set("$result.stdout", string(out.Bytes()))
 	c.Env.Set("$result.stderr", string(er.Bytes()))
-
-    Debugf("%#v", c.Env)
 
 	if err != nil {
 		c.Env.Set("$result.error", err.Error())

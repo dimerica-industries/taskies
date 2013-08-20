@@ -9,7 +9,7 @@ import (
 type taskData struct {
 	name        string
 	description string
-	envset      map[string]string
+	envset      map[string]interface{}
 	data        interface{}
 }
 
@@ -27,17 +27,23 @@ type providerSet map[string]provider
 func (ps providerSet) provide(data interface{}) (Task, error) {
 	val := reflect.ValueOf(data)
 
+    if val.Kind() == reflect.String {
+        val = reflect.ValueOf(map[string]interface{}{
+            data.(string): nil,
+        })
+    }
+
 	if val.Kind() != reflect.Map {
-		return nil, fmt.Errorf("Expecting map, found%s", val.Kind())
+		return nil, fmt.Errorf("Expecting map, found %s", val.Kind())
 	}
 
 	keys := val.MapKeys()
-	td := &taskData{envset: make(map[string]string)}
+	td := &taskData{envset: make(map[string]interface{})}
 	task := ""
 
 	for _, k := range keys {
 		v := val.MapIndex(k).Elem()
-		ks := k.Elem().String()
+		ks := k.String()
 
 		switch ks {
 		case "name":
@@ -52,15 +58,18 @@ func (ps providerSet) provide(data interface{}) (Task, error) {
 			skeys := v.MapKeys()
 
 			for _, sk := range skeys {
-				sv := v.MapIndex(sk).Elem().String()
-				sks := sk.Elem().String()
+				sv := v.MapIndex(sk).Elem().Interface()
+				sks := sk.String()
 
 				td.envset[sks] = sv
 			}
 
 		default:
 			task = ks
-			td.data = v.Interface()
+
+            if v.IsValid() {
+                td.data = v.Interface()
+            }
 		}
 	}
 
@@ -105,6 +114,8 @@ func DecodeYAML(contents []byte, ts *TaskSet) error {
 	var data interface{}
 	err := goyaml.Unmarshal(contents, &data)
 
+    data = clean(data)
+
 	if err != nil {
 		return err
 	}
@@ -120,7 +131,7 @@ func DecodeYAML(contents []byte, ts *TaskSet) error {
 	for _, k := range keys {
 		v := val.MapIndex(k).Elem()
 
-		switch k.Elem().String() {
+		switch k.String() {
 		case "tasks":
 			err = decodeTasks(v, ts)
 
@@ -149,7 +160,7 @@ func decodeEnv(val reflect.Value, ts *TaskSet) error {
 	keys := val.MapKeys()
 
 	for _, k := range keys {
-		ks := k.Elem().String()
+		ks := k.String()
 		vs := fmt.Sprintf("%v", val.MapIndex(k).Elem().Interface())
 
 		ts.Env.Set(ks, vs)
@@ -191,4 +202,27 @@ func decodeTask(val reflect.Value, ts *TaskSet) error {
 	ts.providers[t.Name()] = proxyProviderFunc(t)
 
 	return nil
+}
+
+func clean(val interface{}) interface{} {
+    if m, ok := val.(map[interface{}]interface{}); ok {
+        m2 := make(map[string]interface{})
+
+        for k, v := range m {
+            ks := fmt.Sprintf("%v", k)
+            m2[ks] = clean(v)
+        }
+
+        return m2
+    }
+
+    if sl, ok := val.([]interface{}); ok {
+        for i, v := range sl {
+            sl[i] = clean(v)
+        }
+
+        return sl
+    }
+
+    return fmt.Sprintf("%v", val)
 }
