@@ -201,3 +201,14 @@ tasks:
       test1: ds
 `), "10", nil, "test2", "test3")
 }
+
+func TestAlternateSyntax(t *testing.T) {
+	testEquals(t, []byte(`
+tasks:
+    - name: test1
+      shell: echo 10
+
+    - name: test2
+      task: test1
+`), "10", nil, "test2")
+}

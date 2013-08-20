@@ -51,6 +51,8 @@ func (ps providerSet) provide(data interface{}) (Task, error) {
 			td.name = v.String()
 		case "description":
 			td.description = v.String()
+		case "task":
+			task = v.String()
 		case "set":
 			if v.Kind() != reflect.Map {
 				return nil, fmt.Errorf("set section must be a map, %s found", v.Kind())
