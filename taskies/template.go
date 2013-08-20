@@ -1,7 +1,7 @@
 package taskies
 
 import (
-	"github.com/hoisie/mustache"
+	"github.com/dimerica-industries/taskies/mustache"
 )
 
 func template(str string, env *Env) string {
