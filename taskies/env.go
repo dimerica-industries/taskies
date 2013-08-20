@@ -1,60 +1,103 @@
 package taskies
 
 import (
+    "reflect"
+    "strconv"
+    "strings"
 	"sync"
 )
 
 func NewEnv() *Env {
 	return &Env{
-		vals: make(map[string]string),
+		vals: make(map[string]interface{}),
 	}
 }
 
 type Env struct {
 	parent *Env
 	l      sync.Mutex
-	vals   map[string]string
+	vals   map[string]interface{}
 }
 
-func (e *Env) Get(k string) string {
+func (e *Env) Get(k string) interface{} {
 	e.l.Lock()
 	defer e.l.Unlock()
 
-	v, ok := e.vals[k]
-
-	if ok || e.IsRoot() {
-		return v
-	}
-
-	return e.Parent().Get(k)
+    return e.get(k)
 }
 
-func (e *Env) Set(k string, v string) {
+func (e *Env) get(k string) interface{} {
+    var cur interface{} = e.vals
+    parts := strings.Split(k, ".")
+
+    for _, p := range parts {
+        r := reflect.ValueOf(cur)
+
+        switch r.Kind() {
+        case reflect.Map:
+            v := r.MapIndex(reflect.ValueOf(p))
+
+            if !v.IsValid() {
+                return nil
+            }
+
+            cur = v.Interface()
+        case reflect.Slice:
+            i, _ := strconv.Atoi(p)
+            v := r.Index(i)
+
+            if !v.IsValid() {
+                return nil
+            }
+
+            cur = v.Interface()
+        default:
+            return nil
+        }
+    }
+
+    return cur
+
+}
+
+func (e *Env) Set(k string, v interface{}) {
 	e.l.Lock()
 	defer e.l.Unlock()
 
-	e.vals[k] = template(v, e)
+    e.set(k, v)
 }
 
-func (e *Env) IsRoot() bool {
-	return e.parent == nil
-}
+func (e *Env) set(k string, v interface{}) {
+    k = template(k, e).(string)
+    v = template(v, e)
+    rv := reflect.ValueOf(v)
 
-func (e *Env) Parent() *Env {
-	return e.parent
-}
+    parts := strings.Split(k, ".")
+    l := len(parts)
+    cur := reflect.ValueOf(e.vals)
 
-func (e *Env) Root() *Env {
-	if e.IsRoot() {
-		return e
-	}
+    for i, p := range parts {
+        rp := reflect.ValueOf(p)
 
-	return e.Parent().Root()
-}
+        if i == l - 1 {
+            cur.SetMapIndex(rp, rv)
+            return
+        }
 
-func (e *Env) Child() *Env {
-	e2 := NewEnv()
-	e2.parent = e
+        v := cur.MapIndex(rp)
 
-	return e2
+        if v.IsValid() {
+            v = v.Elem()
+        }
+
+        if !v.IsValid() || v.Kind() != reflect.Map {
+            curv := make(map[string]interface{})
+            tmp := reflect.ValueOf(curv)
+            cur.SetMapIndex(rp, tmp)
+
+            cur = tmp
+        } else {
+            cur = v
+        }
+    }
 }

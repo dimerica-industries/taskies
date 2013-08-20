@@ -375,46 +375,63 @@ func lookup(contextChain []interface{}, name string) reflect.Value {
         }
     }()
 
+    if name == "." {
+        v := contextChain[0].(reflect.Value)
+
+        if v.IsValid() {
+            return v
+        }
+
+        return reflect.Value{}
+    }
+
+    parts := strings.Split(name, ".")
+
 Outer:
     for _, ctx := range contextChain { //i := len(contextChain) - 1; i >= 0; i-- {
         v := ctx.(reflect.Value)
-        for v.IsValid() {
-            typ := v.Type()
-            if n := v.Type().NumMethod(); n > 0 {
-                for i := 0; i < n; i++ {
-                    m := typ.Method(i)
-                    mtyp := m.Type
-                    if m.Name == name && mtyp.NumIn() == 1 {
-                        return v.Method(i).Call(nil)[0]
+Inner:
+        for _, p := range parts {
+            for v.IsValid() {
+                typ := v.Type()
+                if n := v.Type().NumMethod(); n > 0 {
+                    for i := 0; i < n; i++ {
+                        m := typ.Method(i)
+                        mtyp := m.Type
+                        if m.Name == p && mtyp.NumIn() == 1 {
+                            v = v.Method(i).Call(nil)[0]
+                            continue Inner
+                        }
                     }
                 }
-            }
-            if name == "." {
-              return v
-            }
-            switch av := v; av.Kind() {
-            case reflect.Ptr:
-                v = av.Elem()
-            case reflect.Interface:
-                v = av.Elem()
-            case reflect.Struct:
-                ret := av.FieldByName(name)
-                if ret.IsValid() {
-                    return ret
-                } else {
+                switch av := v; av.Kind() {
+                case reflect.Ptr:
+                    v = av.Elem()
+                case reflect.Interface:
+                    v = av.Elem()
+                case reflect.Struct:
+                    ret := av.FieldByName(p)
+                    if ret.IsValid() {
+                        v = ret
+                        continue Inner
+                    } else {
+                        continue Outer
+                    }
+                case reflect.Map:
+                    ret := av.MapIndex(reflect.ValueOf(p))
+                    if ret.IsValid() {
+                        v = ret
+                        continue Inner
+                    } else {
+                        continue Outer
+                    }
+                default:
                     continue Outer
                 }
-            case reflect.Map:
-                ret := av.MapIndex(reflect.ValueOf(name))
-                if ret.IsValid() {
-                    return ret
-                } else {
-                    continue Outer
-                }
-            default:
-                continue Outer
             }
         }
+
+        return v
     }
     return reflect.Value{}
 }

@@ -40,7 +40,6 @@ type RunContext struct {
 
 func (c *RunContext) Run(t Task) error {
 	ctxt := c.Clone()
-	ctxt.Env = ctxt.Env.Child()
 	Debugf("[task] [%s]", t.Name())
 
 	out := new(bytes.Buffer)
@@ -53,6 +52,8 @@ func (c *RunContext) Run(t Task) error {
 
 	c.Env.Set("$result.stdout", string(out.Bytes()))
 	c.Env.Set("$result.stderr", string(er.Bytes()))
+
+    Debugf("%#v", c.Env)
 
 	if err != nil {
 		c.Env.Set("$result.error", err.Error())

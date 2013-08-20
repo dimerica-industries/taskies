@@ -134,6 +134,7 @@ func DecodeYAML(contents []byte, ts *TaskSet) error {
 				return err
 			}
 		default:
+            return fmt.Errorf("Invalid key: %s", k.Elem().String())
 		}
 	}
 
