@@ -11,10 +11,6 @@ type ProxyTask struct {
 	data interface{}
 }
 
-func (t *ProxyTask) ChildEnv() bool {
-    return false
-}
-
 func (t *ProxyTask) Run(ctxt *RunContext) error {
 	val := reflect.ValueOf(t.data)
 
@@ -29,7 +25,12 @@ func (t *ProxyTask) Run(ctxt *RunContext) error {
 		}
 	}
 
-	return ctxt.Run(t.task)
+	return t.task.Run(ctxt)
+}
+
+func (t *ProxyTask) EnvSet() map[string]interface{} {
+    //need to merge env
+    return t.task.EnvSet()
 }
 
 func proxyProviderFunc(t Task) provider {
