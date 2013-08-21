@@ -72,7 +72,7 @@ func (c *baseContext) Run(t Task) *RunResult {
 
 	env := c.Env().Child()
 
-	c.Env().Set(name, env)
+	c.Env().Set("$" + name, env)
 
 	sout := io.MultiWriter(c.Out(), out)
 	serr := io.MultiWriter(c.Err(), er)

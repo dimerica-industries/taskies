@@ -105,7 +105,7 @@ tasks:
     tasks:
      - test
      - test
-     - shell: echo {{test_1.x}}
+     - shell: echo {{$test_1.x}}
 `), "202050", nil, "test2")
 }
 
