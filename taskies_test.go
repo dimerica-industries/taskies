@@ -205,12 +205,13 @@ func TestComplexInput(t *testing.T) {
     testEquals(t, []byte(`
 tasks:
   - name: test
-    shell: echo "{{#var}}{{.}}{{/var}}"
+    shell: echo "{{#var1}}{{.}}{{/var1}}{{#var2}}{{/var2}}"
 
   - name: test2
     test:
-      var:
+      var1: 
         - one
         - two
+      var2: "hello"
 `), "onetwo", nil, "test2")
 }

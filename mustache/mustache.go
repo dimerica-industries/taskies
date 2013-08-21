@@ -495,10 +495,8 @@ func renderSection(section *sectionElement, contextChain []interface{}, buf io.W
 			for i := 0; i < val.Len(); i++ {
 				contexts = append(contexts, val.Index(i))
 			}
-		case reflect.Map, reflect.Struct:
-			contexts = append(contexts, value)
 		default:
-			contexts = append(contexts, context)
+			contexts = append(contexts, value)
 		}
 	} else if section.inverted {
 		contexts = append(contexts, context)

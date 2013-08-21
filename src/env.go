@@ -44,6 +44,10 @@ func (e *Env) Get(k string) interface{} {
 }
 
 func (e *Env) get(k string) interface{} {
+    if k == "." {
+        return e.vals
+    }
+
 	var cur interface{} = e.vals
 	parts := strings.Split(k, ".")
 
