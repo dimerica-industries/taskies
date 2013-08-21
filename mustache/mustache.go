@@ -528,7 +528,7 @@ func renderElement(element interface{}, contextChain []interface{}, buf io.Write
 		val := lookup(contextChain, elem.name)
 
 		if val.IsValid() {
-			if elem.raw {
+			if elem.raw || true {
 				fmt.Fprint(buf, val.Interface())
 			} else {
 				s := fmt.Sprint(val.Interface())
