@@ -10,10 +10,10 @@ type CompositeTask struct {
 	tasks []Task
 }
 
-func (t *CompositeTask) Run(ctxt *RunContext) error {
+func (t *CompositeTask) Run(ctxt RunContext) error {
 	for _, t := range t.tasks {
-		if e := ctxt.Run(t); e != nil {
-			return e
+		if res := ctxt.Run(t); res.error != nil {
+			return res.error
 		}
 	}
 
@@ -21,7 +21,7 @@ func (t *CompositeTask) Run(ctxt *RunContext) error {
 }
 
 func compositeProvider(ps providerSet, data *taskData) (Task, error) {
-	val := reflect.ValueOf(data.data)
+	val := reflect.ValueOf(data.taskData)
 
 	if val.Kind() != reflect.Slice {
 		return nil, fmt.Errorf("CompositeProvider expects slice, %s found", val.Kind())

@@ -7,6 +7,10 @@ import (
 )
 
 func template(tmpl interface{}, env *Env) interface{} {
+	if _, ok := tmpl.(*Env); ok {
+		return tmpl
+	}
+
 	var str string
 	r := reflect.ValueOf(tmpl)
 
@@ -40,14 +44,18 @@ func template(tmpl interface{}, env *Env) interface{} {
 		str = fmt.Sprintf("%v", tmpl)
 	}
 
-	ctxt := []interface{}{env.vals}
+	out := mustache.Render(str, &finder{env})
 
-	for !env.IsRoot() {
-		env = env.Parent()
-		ctxt = append(ctxt, env.vals)
-	}
+	Debugf("[TEMPLATE] [env=%s] [before=%s] [after=%s]", env.Id(), str, out)
 
-	Debugf("[TEMPLATE] %s %v", str, ctxt)
+	return out
+}
 
-	return mustache.Render(str, ctxt...)
+type finder struct {
+	env *Env
+}
+
+func (f *finder) Lookup(name string) reflect.Value {
+	v := f.env.Get(name)
+	return reflect.ValueOf(v)
 }

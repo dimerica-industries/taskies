@@ -16,7 +16,7 @@ func NewEnv() *Env {
 
 type Env struct {
 	parent *Env
-	l      sync.Mutex
+	l      sync.RWMutex
 	vals   map[string]interface{}
 }
 
@@ -31,8 +31,8 @@ func (e *Env) Id() string {
 }
 
 func (e *Env) Get(k string) interface{} {
-	e.l.Lock()
-	defer e.l.Unlock()
+	e.l.RLock()
+	defer e.l.RUnlock()
 
 	v := e.get(k)
 
@@ -40,14 +40,18 @@ func (e *Env) Get(k string) interface{} {
 		return v
 	}
 
-	return e.Parent().get(k)
+	return e.Parent().Get(k)
 }
 
 func (e *Env) get(k string) interface{} {
 	var cur interface{} = e.vals
 	parts := strings.Split(k, ".")
 
-	for _, p := range parts {
+	for i, p := range parts {
+		if e2, ok := cur.(*Env); ok {
+			return e2.Get(strings.Join(parts[i:], "."))
+		}
+
 		r := reflect.ValueOf(cur)
 
 		switch r.Kind() {
@@ -78,6 +82,9 @@ func (e *Env) get(k string) interface{} {
 }
 
 func (e *Env) Set(k string, v interface{}) {
+	k = template(k, e).(string)
+	v = template(v, e)
+
 	e.l.Lock()
 	defer e.l.Unlock()
 
@@ -86,8 +93,6 @@ func (e *Env) Set(k string, v interface{}) {
 
 func (e *Env) set(k string, v interface{}) {
 	Debugf("[ENV SET] %s %s = %#v", e.Id(), k, v)
-	k = template(k, e).(string)
-	v = template(v, e)
 	rv := reflect.ValueOf(v)
 
 	parts := strings.Split(k, ".")
@@ -95,6 +100,11 @@ func (e *Env) set(k string, v interface{}) {
 	cur := reflect.ValueOf(e.vals)
 
 	for i, p := range parts {
+		if e2, ok := cur.Interface().(*Env); ok {
+			e2.Set(strings.Join(parts[i:], "."), v)
+			return
+		}
+
 		rp := reflect.ValueOf(p)
 
 		if i == l-1 {
@@ -139,6 +149,8 @@ func (e *Env) Root() *Env {
 func (e *Env) Child() *Env {
 	e2 := NewEnv()
 	e2.parent = e
+
+	Debugf("[NEW ENV] %s %s", e.Id(), e2.Id())
 
 	return e2
 }

@@ -11,7 +11,7 @@ import (
 
 var x = fmt.Println
 
-func test(contents []byte, in io.Reader, tasks ...string) ([]byte, []byte, error) {
+func run(contents []byte, in io.Reader, tasks ...string) ([]byte, []byte, error) {
 	if in != nil {
 		in = bytes.NewBuffer([]byte{})
 	}
@@ -41,7 +41,7 @@ func test(contents []byte, in io.Reader, tasks ...string) ([]byte, []byte, error
 }
 
 func testEquals(t *testing.T, yaml []byte, str string, in io.Reader, tasks ...string) {
-	out, _, e := test(yaml, in, tasks...)
+	out, _, e := run(yaml, in, tasks...)
 
 	if e != nil {
 		t.Fatal(e)
@@ -93,23 +93,30 @@ tasks:
 `), "100", nil, "test custom")
 }
 
+func TestCustomSetEnv(t *testing.T) {
+	testEquals(t, []byte(`
+tasks:
+  - name: test
+    shell: bash -c "echo -n 20"
+    set: 
+      x: 50
+
+  - name: test2
+    tasks:
+     - name: test
+       task: test
+     - shell: echo {{test.x}}
+`), "2050", nil, "test2")
+}
+
 func TestDecodeEnv(t *testing.T) {
-	yaml := []byte(`
+	testEquals(t, []byte(`
 env:
   key: value 
-`)
-	ts := taskies.NewTaskSet()
-	e := taskies.DecodeYAML(yaml, ts)
-
-	if e != nil {
-		t.Fatal(e)
-	}
-
-	v := ts.Env.Get("key")
-
-	if v != "value" {
-		t.Fatalf("Expecting \"value\", found \"%s\"", v)
-	}
+tasks:
+  - name: test
+    shell: echo {{key}}
+`), "value", nil)
 }
 
 func TestTemplate(t *testing.T) {
@@ -130,7 +137,7 @@ tasks:
       shell: bash -c "echo -n 10"
 
     - name: test2
-      shell: bash -c "echo -n bleh{{$result.stdout}}"
+      shell: bash -c "echo -n bleh{{$last.$stdout}}"
 `), "10bleh10", nil)
 }
 
@@ -147,7 +154,7 @@ tasks:
     - name: test2
       tasks:
         - test1
-        - shell: bash -c "echo -n {{OMG}}"
+        - shell: bash -c "echo -n {{$last.OMG}}"
 `), "WE DID IT", nil, "test2")
 }
 
@@ -164,27 +171,8 @@ tasks:
     - name: test2
       tasks:
         - test1
-        - shell: bash -c "echo -n {{complex.OMG}}"
+        - shell: bash -c "echo -n {{$last.complex.OMG}}"
 `), "WE DID IT", nil, "test2")
-}
-
-func TestCustomMerge(t *testing.T) {
-	testEquals(t, []byte(`
-tasks:
-    - name: test1
-      shell: echo 10 > /dev/null
-      set:
-        OMG: WE DID IT
-        complex:
-            OMG: WE DID IT
-
-    - name: test2
-      tasks:
-        - test1: 
-          set:
-            OMG: MAYBE NOT?
-        - shell: bash -c "echo -n {{OMG}}"
-`), "MAYBE NOT?", nil, "test2")
 }
 
 func TestCustomScope(t *testing.T) {

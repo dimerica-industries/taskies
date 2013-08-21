@@ -11,10 +11,10 @@ type PipeTask struct {
 	tasks []Task
 }
 
-func (t *PipeTask) Run(ctxt *RunContext) error {
+func (t *PipeTask) Run(ctxt RunContext) error {
 	ch := make(chan error)
 	l := len(t.tasks)
-	in := ctxt.In
+	in := ctxt.In()
 
 	for i, t := range t.tasks {
 		var (
@@ -23,24 +23,21 @@ func (t *PipeTask) Run(ctxt *RunContext) error {
 		)
 
 		if i == l-1 {
-			pr = ctxt.In
-			pw = ctxt.Out
+			pr = ctxt.In()
+			pw = ctxt.Out()
 		} else {
 			pr, pw = io.Pipe()
 		}
 
 		go func(t Task, in io.Reader, out io.Writer) {
-			ctxt = ctxt.Clone()
-			ctxt.In = in
-			ctxt.Out = out
-
-			err := ctxt.Run(t)
+			ctxt = ctxt.Clone(nil, in, out, nil)
+			res := ctxt.Run(t)
 
 			if c, ok := out.(io.Closer); ok {
 				c.Close()
 			}
 
-			ch <- err
+			ch <- res.error
 		}(t, in, pw)
 
 		in = pr
@@ -63,7 +60,7 @@ func (t *PipeTask) Run(ctxt *RunContext) error {
 }
 
 func pipeProvider(ps providerSet, data *taskData) (Task, error) {
-	val := reflect.ValueOf(data.data)
+	val := reflect.ValueOf(data.taskData)
 
 	if val.Kind() != reflect.Slice {
 		return nil, fmt.Errorf("PipeProvider expects slice, %s found", val.Kind())

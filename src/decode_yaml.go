@@ -9,15 +9,15 @@ import (
 type taskData struct {
 	name        string
 	description string
-	envset      map[string]interface{}
-	data        interface{}
+	exportData  map[string]interface{}
+	taskData    interface{}
 }
 
 func baseTaskFromTaskData(td *taskData) *baseTask {
 	return &baseTask{
 		name:        td.name,
 		description: td.description,
-		envSet:      []map[string]interface{}{td.envset},
+		exportData:  []map[string]interface{}{td.exportData},
 	}
 }
 
@@ -25,7 +25,6 @@ type provider func(providerSet, *taskData) (Task, error)
 type providerSet map[string]provider
 
 func (ps providerSet) provide(data interface{}) (Task, error) {
-	Debugf("[PROVIDER] %v", data)
 	val := reflect.ValueOf(data)
 
 	if val.Kind() == reflect.String {
@@ -38,9 +37,11 @@ func (ps providerSet) provide(data interface{}) (Task, error) {
 		return nil, fmt.Errorf("Expecting map, found %s", val.Kind())
 	}
 
-	keys := val.MapKeys()
-	td := &taskData{envset: make(map[string]interface{})}
-	task := ""
+	var (
+		task string
+		td   = &taskData{exportData: make(map[string]interface{})}
+		keys = val.MapKeys()
+	)
 
 	for _, k := range keys {
 		v := val.MapIndex(k).Elem()
@@ -64,14 +65,14 @@ func (ps providerSet) provide(data interface{}) (Task, error) {
 				sv := v.MapIndex(sk).Elem().Interface()
 				sks := sk.String()
 
-				td.envset[sks] = sv
+				td.exportData[sks] = sv
 			}
 
 		default:
 			task = ks
 
 			if v.IsValid() {
-				td.data = v.Interface()
+				td.taskData = v.Interface()
 			}
 		}
 	}
@@ -87,12 +88,9 @@ func (ps providerSet) provide(data interface{}) (Task, error) {
 	}
 
 	t, err := prov(ps, td)
+	Debugf("[PROVIDER] [type=%s] [task=%#v] [data=%#v]", task, t, td)
 
-	if err != nil {
-		return nil, err
-	}
-
-	return t, nil
+	return t, err
 }
 
 func NewTaskSet() *TaskSet {

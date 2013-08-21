@@ -12,26 +12,26 @@ type ShellTask struct {
 	args []string
 }
 
-func (t *ShellTask) Run(ctxt *RunContext) error {
-	cmd := template(t.cmd, ctxt.Env).(string)
+func (t *ShellTask) Run(ctxt RunContext) error {
+	cmd := template(t.cmd, ctxt.Env()).(string)
 	args := make([]string, len(t.args))
 
 	for i, _ := range args {
-		args[i] = template(t.args[i], ctxt.Env).(string)
+		args[i] = template(t.args[i], ctxt.Env()).(string)
 	}
 
 	Debugf("[SHELL] %s %s", cmd, args)
 	c := exec.Command(cmd, args...)
 
-	c.Stdin = ctxt.In
-	c.Stdout = ctxt.Out
-	c.Stderr = ctxt.Err
+	c.Stdin = ctxt.In()
+	c.Stdout = ctxt.Out()
+	c.Stderr = ctxt.Err()
 
 	return c.Run()
 }
 
 func shellProvider(ps providerSet, data *taskData) (Task, error) {
-	val := reflect.ValueOf(data.data)
+	val := reflect.ValueOf(data.taskData)
 
 	if val.Kind() != reflect.String {
 		return nil, fmt.Errorf("shell requires string, %s found", val.Kind())

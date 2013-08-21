@@ -375,6 +375,12 @@ func lookup(contextChain []interface{}, name string) reflect.Value {
 		}
 	}()
 
+	if len(contextChain) >= 0 {
+		if finder, ok := contextChain[0].(reflect.Value).Interface().(Finder); ok {
+			return finder.Lookup(name)
+		}
+	}
+
 	if name == "." {
 		v := contextChain[0].(reflect.Value)
 
@@ -630,4 +636,8 @@ func RenderFileInLayout(filename string, layoutFile string, context ...interface
 		return err.Error()
 	}
 	return tmpl.RenderInLayout(layoutTmpl, context...)
+}
+
+type Finder interface {
+	Lookup(string) reflect.Value
 }
