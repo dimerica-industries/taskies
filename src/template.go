@@ -35,7 +35,7 @@ func template(tmpl interface{}, env *Env) interface{} {
 		sl := make([]interface{}, l)
 
 		for i := 0; i < l; i++ {
-			v := r.Index(i)
+			v := r.Index(i).Elem().Interface()
 			sl[i] = template(v, env)
 		}
 

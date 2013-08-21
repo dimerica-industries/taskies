@@ -92,7 +92,7 @@ func (e *Env) Set(k string, v interface{}) {
 }
 
 func (e *Env) set(k string, v interface{}) {
-	Debugf("[ENV SET] %s %s = %#v", e.Id(), k, v)
+	Debugf("[ENV SET] %s %#v = %#v", e.Id(), k, v)
 	rv := reflect.ValueOf(v)
 
 	parts := strings.Split(k, ".")

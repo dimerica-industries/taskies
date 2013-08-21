@@ -1,7 +1,6 @@
 package src
 
 import (
-	"fmt"
 	"reflect"
 )
 
@@ -14,18 +13,18 @@ type ProxyTask struct {
 func (t *ProxyTask) Run(ctxt RunContext) error {
 	val := reflect.ValueOf(t.data)
 
-	Debugf("[PROXY TASK] %v", t.data)
-
 	if val.Kind() == reflect.Map {
 		keys := val.MapKeys()
 
 		for _, k := range keys {
 			ks := k.String()
-			vs := fmt.Sprintf("%v", val.MapIndex(k).Elem().Interface())
+			vs := val.MapIndex(k).Elem().Interface()
 
 			ctxt.Env().Set(ks, vs)
 		}
 	}
+
+	Debugf("[PROXY TASK] %#v %v", t.task, t.data)
 
 	return t.task.Run(ctxt)
 }

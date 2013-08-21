@@ -200,3 +200,17 @@ tasks:
       task: test1
 `), "10", nil, "test2")
 }
+
+func TestComplexInput(t *testing.T) {
+    testEquals(t, []byte(`
+tasks:
+  - name: test
+    shell: echo "{{#var}}{{.}}{{/var}}"
+
+  - name: test2
+    test:
+      var:
+        - one
+        - two
+`), "onetwo", nil, "test2")
+}
