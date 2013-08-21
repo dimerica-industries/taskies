@@ -20,6 +20,7 @@ type RunContext interface {
 }
 
 type Task interface {
+	Type() string
 	Name() string
 	Description() string
 	Run(RunContext) error
@@ -27,9 +28,14 @@ type Task interface {
 }
 
 type baseTask struct {
+	typ         string
 	name        string
 	description string
 	exportData  []map[string]interface{}
+}
+
+func (t *baseTask) Type() string {
+	return t.typ
 }
 
 func (t *baseTask) Name() string {

@@ -103,10 +103,10 @@ tasks:
 
   - name: test2
     tasks:
-     - name: test
-       task: test
-     - shell: echo {{test.x}}
-`), "2050", nil, "test2")
+     - test
+     - test
+     - shell: echo {{test_1.x}}
+`), "202050", nil, "test2")
 }
 
 func TestDecodeEnv(t *testing.T) {

@@ -2,8 +2,20 @@ package src
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 )
+
+func newBaseContext(env *Env, in io.Reader, out, err io.Writer) *baseContext {
+	return &baseContext{
+		env:        env,
+		in:         in,
+		out:        out,
+		err:        err,
+		childTasks: make([]Task, 0),
+		names:      make(map[string]bool),
+	}
+}
 
 type baseContext struct {
 	env        *Env
@@ -11,6 +23,7 @@ type baseContext struct {
 	out        io.Writer
 	err        io.Writer
 	childTasks []Task
+	names      map[string]bool
 }
 
 func (c *baseContext) Env() *Env {
@@ -30,21 +43,43 @@ func (c *baseContext) Err() io.Writer {
 }
 
 func (c *baseContext) Run(t Task) *RunResult {
+	c.childTasks = append(c.childTasks, t)
+	name := t.Name()
+
+	if name == "" {
+		name = t.Type()
+	}
+
+	if _, ok := c.names[name]; ok {
+		i := 1
+
+		for {
+			n := fmt.Sprintf("%s_%d", name, i)
+
+			if _, ok := c.names[n]; !ok {
+				name = n
+				break
+			}
+
+			i++
+		}
+	}
+
+	c.names[name] = true
+
 	out := new(bytes.Buffer)
 	er := new(bytes.Buffer)
 
-	c.childTasks = append(c.childTasks, t)
-
 	env := c.Env().Child()
 
-	c.Env().Set(t.Name(), env)
+	c.Env().Set(name, env)
 
 	sout := io.MultiWriter(c.Out(), out)
 	serr := io.MultiWriter(c.Err(), er)
 
 	ctxt := c.Clone(env, nil, sout, serr)
 
-	Debugf("[RUN] [name=%s] [env=%s]", t.Name(), ctxt.Env().Id())
+	Debugf("[RUN] [name=%s] [env=%s]", name, ctxt.Env().Id())
 
 	err := t.Run(ctxt)
 
@@ -89,11 +124,5 @@ func (c *baseContext) Clone(env *Env, in io.Reader, out, err io.Writer) RunConte
 		err = c.err
 	}
 
-	return &baseContext{
-		env:        env,
-		in:         in,
-		out:        out,
-		err:        err,
-		childTasks: make([]Task, 0),
-	}
+	return newBaseContext(env, in, out, err)
 }

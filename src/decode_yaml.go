@@ -7,6 +7,7 @@ import (
 )
 
 type taskData struct {
+	task        string
 	name        string
 	description string
 	exportData  map[string]interface{}
@@ -15,6 +16,7 @@ type taskData struct {
 
 func baseTaskFromTaskData(td *taskData) *baseTask {
 	return &baseTask{
+		typ:         td.task,
 		name:        td.name,
 		description: td.description,
 		exportData:  []map[string]interface{}{td.exportData},
@@ -38,7 +40,6 @@ func (ps providerSet) provide(data interface{}) (Task, error) {
 	}
 
 	var (
-		task string
 		td   = &taskData{exportData: make(map[string]interface{})}
 		keys = val.MapKeys()
 	)
@@ -53,7 +54,7 @@ func (ps providerSet) provide(data interface{}) (Task, error) {
 		case "description":
 			td.description = v.String()
 		case "task":
-			task = v.String()
+			td.task = v.String()
 		case "export":
 			if v.Kind() != reflect.Map {
 				return nil, fmt.Errorf("set section must be a map, %s found", v.Kind())
@@ -69,7 +70,7 @@ func (ps providerSet) provide(data interface{}) (Task, error) {
 			}
 
 		default:
-			task = ks
+			td.task = ks
 
 			if v.IsValid() {
 				td.taskData = v.Interface()
@@ -77,18 +78,18 @@ func (ps providerSet) provide(data interface{}) (Task, error) {
 		}
 	}
 
-	if task == "" {
+	if td.task == "" {
 		return nil, fmt.Errorf("No task provided")
 	}
 
-	prov, ok := ps[task]
+	prov, ok := ps[td.task]
 
 	if !ok {
-		return nil, fmt.Errorf("No task named \"%s\" found", task)
+		return nil, fmt.Errorf("No task named \"%s\" found", td.task)
 	}
 
 	t, err := prov(ps, td)
-	Debugf("[PROVIDER] [type=%s] [task=%#v] [data=%#v]", task, t, td)
+	Debugf("[PROVIDER] [task=%#v] [data=%#v]", t, td)
 
 	return t, err
 }

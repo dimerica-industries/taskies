@@ -7,14 +7,8 @@ import (
 
 func NewRunner(tasks map[string]Task, env *Env, in io.Reader, out, err io.Writer) *Runner {
 	return &Runner{
-		tasks: tasks,
-		context: &baseContext{
-			env:        env,
-			in:         in,
-			out:        out,
-			err:        err,
-			childTasks: make([]Task, 0),
-		},
+		tasks:   tasks,
+		context: newBaseContext(env, in, out, err),
 	}
 }
 
