@@ -98,7 +98,7 @@ func TestCustomSetEnv(t *testing.T) {
 tasks:
   - name: test
     shell: bash -c "echo -n 20"
-    set: 
+    export: 
       x: 50
 
   - name: test2
@@ -146,7 +146,7 @@ func TestCustomSet(t *testing.T) {
 tasks:
     - name: test1
       shell: echo 10 > /dev/null
-      set:
+      export:
         OMG: WE DID IT
         complex:
             OMG: WE DID IT
@@ -163,7 +163,7 @@ func TestCustomComplexSet(t *testing.T) {
 tasks:
     - name: test1
       shell: echo 10 > /dev/null
-      set:
+      export:
         OMG: WE DID IT
         complex:
             OMG: WE DID IT
