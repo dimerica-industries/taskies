@@ -56,6 +56,9 @@ type finder struct {
 }
 
 func (f *finder) Lookup(name string) reflect.Value {
-	v := f.env.Get(name)
-	return reflect.ValueOf(v)
+	if v := f.env.Get(name); v != nil {
+        return reflect.ValueOf(v)
+    }
+
+    return reflect.Value{}
 }
