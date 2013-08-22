@@ -5,6 +5,8 @@ import (
 	"reflect"
 )
 
+// Run multiple tasks in serial.
+// In YAML, this is represented as a "- tasks:" block
 type CompositeTask struct {
 	*baseTask
 	tasks []Task

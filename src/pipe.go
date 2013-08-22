@@ -6,6 +6,10 @@ import (
 	"reflect"
 )
 
+// Start multiple tasks in parallel but join stdout -> stdin of
+// contiguous tasks
+//
+// Represented as "- pipe" in YAML
 type PipeTask struct {
 	*baseTask
 	tasks []Task

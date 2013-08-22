@@ -51,9 +51,6 @@ func TestChainedEnv(t *testing.T) {
 	e2.Set("a.b.c", 3)
 	e1.Set("d.e", e2)
 
-	fmt.Printf("%#v\n", e1.vals)
-	fmt.Printf("%#v\n", e2.vals)
-
 	if e1.Get("d.e.a.b.c") != "3" {
 		t.Fatalf("Expected 3,found %s", e1.Get("d.e.a.b.c"))
 	}

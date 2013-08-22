@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"launchpad.net/goyaml"
 	"reflect"
+	"strings"
 )
 
 type taskData struct {
@@ -102,14 +103,18 @@ func NewTaskSet() *TaskSet {
 			"pipe":  pipeProvider,
 			"tasks": compositeProvider,
 		},
-		Tasks: make(map[string]Task),
+		Tasks:           make(map[string]Task),
+		ExportedTasks:   make(map[string]Task),
+		UnexportedTasks: make(map[string]Task),
 	}
 }
 
 type TaskSet struct {
-	Env       *Env
-	providers providerSet
-	Tasks     map[string]Task
+	Env             *Env
+	providers       providerSet
+	Tasks           map[string]Task
+	ExportedTasks   map[string]Task
+	UnexportedTasks map[string]Task
 }
 
 func DecodeYAML(contents []byte, ts *TaskSet) error {
@@ -196,12 +201,21 @@ func decodeTask(val reflect.Value, ts *TaskSet) error {
 		return err
 	}
 
-	if t.Name() == "" {
+	name := t.Name()
+	lname := strings.ToLower(name)
+
+	if name == "" {
 		return fmt.Errorf("No name found")
 	}
 
-	ts.Tasks[t.Name()] = t
-	ts.providers[t.Name()] = proxyProviderFunc(t)
+	if name[0] == lname[0] {
+		ts.UnexportedTasks[lname] = t
+	} else {
+		ts.ExportedTasks[lname] = t
+	}
+
+	ts.Tasks[lname] = t
+	ts.providers[lname] = proxyProviderFunc(t)
 
 	return nil
 }

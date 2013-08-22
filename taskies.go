@@ -70,9 +70,9 @@ func main() {
 	}
 
 	if *list {
-		fmt.Printf("Tasks:\n")
-		for name, _ := range ts.Tasks {
-			fmt.Printf("  - %s\n", name)
+		fmt.Printf("Available Tasks:\n")
+		for name, t := range ts.ExportedTasks {
+			fmt.Printf("  %s - %s\n", name, t.Description())
 		}
 
 		os.Exit(0)
@@ -83,7 +83,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	runner := taskies.NewRunner(ts.Tasks, ts.Env, os.Stdin, os.Stdout, os.Stderr)
+	runner := taskies.NewRunner(ts, ts.Env, os.Stdin, os.Stdout, os.Stderr)
 	err := runner.Run(tasks...)
 
 	if err != nil {

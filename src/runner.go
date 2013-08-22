@@ -3,9 +3,10 @@ package src
 import (
 	"fmt"
 	"io"
+	"strings"
 )
 
-func NewRunner(tasks map[string]Task, env *Env, in io.Reader, out, err io.Writer) *Runner {
+func NewRunner(tasks *TaskSet, env *Env, in io.Reader, out, err io.Writer) *Runner {
 	return &Runner{
 		tasks:   tasks,
 		context: newBaseContext(env, in, out, err),
@@ -13,12 +14,12 @@ func NewRunner(tasks map[string]Task, env *Env, in io.Reader, out, err io.Writer
 }
 
 type Runner struct {
-	tasks   map[string]Task
+	tasks   *TaskSet
 	context *baseContext
 }
 
 func (r *Runner) RunAll() error {
-	for _, t := range r.tasks {
+	for _, t := range r.tasks.ExportedTasks {
 		if res := r.context.Run(t); res.error != nil {
 			return res.error
 		}
@@ -29,7 +30,8 @@ func (r *Runner) RunAll() error {
 
 func (r *Runner) Run(tasks ...string) error {
 	for _, t := range tasks {
-		task, ok := r.tasks[t]
+		t := strings.ToLower(t)
+		task, ok := r.tasks.ExportedTasks[t]
 
 		if !ok {
 			return fmt.Errorf("Missing task %s", t)

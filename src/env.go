@@ -14,6 +14,14 @@ func NewEnv() *Env {
 	}
 }
 
+// thread safe map of string -> interface{} with parent/child
+// scope
+//
+// eg - if B is child of A, and key xyz is requested in B
+// but doesn't exist, A will then be searched
+//
+// "." is used as an object delimeter, so get("a.b") is mapped to
+// get("a").get("b")
 type Env struct {
 	parent *Env
 	l      sync.RWMutex
@@ -44,9 +52,9 @@ func (e *Env) Get(k string) interface{} {
 }
 
 func (e *Env) get(k string) interface{} {
-    if k == "." {
-        return e.vals
-    }
+	if k == "." {
+		return e.vals
+	}
 
 	var cur interface{} = e.vals
 	parts := strings.Split(k, ".")

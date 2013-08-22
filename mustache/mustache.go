@@ -379,9 +379,9 @@ func lookup(contextChain []interface{}, name string) reflect.Value {
 		v := contextChain[0].(reflect.Value)
 
 		if v.IsValid() {
-            if finder, ok := v.Interface().(Finder); ok {
-                return finder.Lookup(name)
-            }
+			if finder, ok := v.Interface().(Finder); ok {
+				return finder.Lookup(name)
+			}
 			return v
 		}
 
@@ -396,9 +396,9 @@ Outer:
 	Inner:
 		for ind, p := range parts {
 			for v.IsValid() {
-                if finder, ok := v.Interface().(Finder); ok {
-                    return finder.Lookup(strings.Join(parts[ind:], "."))
-                }
+				if finder, ok := v.Interface().(Finder); ok {
+					return finder.Lookup(strings.Join(parts[ind:], "."))
+				}
 				typ := v.Type()
 				if n := v.Type().NumMethod(); n > 0 {
 					for i := 0; i < n; i++ {
@@ -498,8 +498,8 @@ func renderSection(section *sectionElement, contextChain []interface{}, buf io.W
 		case reflect.Map, reflect.Struct:
 			contexts = append(contexts, value)
 		default:
-            //hack
-            contextChain = append([]interface{}{value}, contextChain...)
+			//hack
+			contextChain = append([]interface{}{value}, contextChain...)
 			contexts = append(contexts, value)
 		}
 	} else if section.inverted {

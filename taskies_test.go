@@ -25,7 +25,7 @@ func run(contents []byte, in io.Reader, tasks ...string) ([]byte, []byte, error)
 		return nil, nil, e
 	}
 
-	run := taskies.NewRunner(ts.Tasks, ts.Env, in, out, err)
+	run := taskies.NewRunner(ts, ts.Env, in, out, err)
 
 	if len(tasks) == 0 {
 		e = run.RunAll()
@@ -57,7 +57,7 @@ func testEquals(t *testing.T, yaml []byte, str string, in io.Reader, tasks ...st
 func TestShell(t *testing.T) {
 	testEquals(t, []byte(`
 tasks:
-    - name: test shell
+    - name: Test shell
       shell: echo 3
 `), "3", nil)
 }
@@ -65,7 +65,7 @@ tasks:
 func TestPipe(t *testing.T) {
 	testEquals(t, []byte(`
 tasks:
-    - name: test pipe
+    - name: Test pipe
       pipe:
           - shell: echo 3
           - shell: cat
@@ -75,7 +75,7 @@ tasks:
 func TestMultiple(t *testing.T) {
 	testEquals(t, []byte(`
 tasks:
-    - name: test multiple
+    - name: Test multiple
       tasks:
         - shell: bash -c "echo -n 10"
         - shell: bash -c "echo -n 3"
@@ -85,12 +85,12 @@ tasks:
 func TestCustom(t *testing.T) {
 	testEquals(t, []byte(`
 tasks:
-    - name: test
+    - name: Test
       shell: bash -c "echo {{val}}"
-    - name: test custom
+    - name: Test custom
       test: 
         val: 100
-`), "100", nil, "test custom")
+`), "100", nil, "Test custom")
 }
 
 func TestCustomSetEnv(t *testing.T) {
@@ -101,12 +101,12 @@ tasks:
     export: 
       x: 50
 
-  - name: test2
+  - name: Test2
     tasks:
      - test
      - test
      - shell: echo {{$test_1.x}}
-`), "202050", nil, "test2")
+`), "202050", nil, "Test2")
 }
 
 func TestDecodeEnv(t *testing.T) {
@@ -114,7 +114,7 @@ func TestDecodeEnv(t *testing.T) {
 env:
   key: value 
 tasks:
-  - name: test
+  - name: Test
     shell: echo {{key}}
 `), "value", nil)
 }
@@ -125,7 +125,7 @@ env:
     val: 10
     val2: wtf_{{val}}
 tasks:
-    - name: test template
+    - name: Test template
       shell: echo {{val2}}
 `), "wtf_10", nil)
 }
@@ -133,10 +133,10 @@ tasks:
 func TestResultSet(t *testing.T) {
 	testEquals(t, []byte(`
 tasks:
-    - name: test1
+    - name: Test1
       shell: bash -c "echo -n 10"
 
-    - name: test2
+    - name: Test2
       shell: bash -c "echo -n bleh{{$last.$stdout}}"
 `), "10bleh10", nil)
 }
@@ -151,11 +151,11 @@ tasks:
         complex:
             OMG: WE DID IT
 
-    - name: test2
+    - name: Test2
       tasks:
         - test1
         - shell: bash -c "echo -n {{$last.OMG}}"
-`), "WE DID IT", nil, "test2")
+`), "WE DID IT", nil, "Test2")
 }
 
 func TestCustomComplexSet(t *testing.T) {
@@ -168,11 +168,11 @@ tasks:
         complex:
             OMG: WE DID IT
 
-    - name: test2
+    - name: Test2
       tasks:
         - test1
         - shell: bash -c "echo -n {{$last.complex.OMG}}"
-`), "WE DID IT", nil, "test2")
+`), "WE DID IT", nil, "Test2")
 }
 
 func TestCustomScope(t *testing.T) {
@@ -181,13 +181,13 @@ tasks:
     - name: test1
       shell: echo {{hello}}
 
-    - name: test2
+    - name: Test2
       test1:
         hello: 10
 
-    - name: test3
+    - name: Test3
       test1: ds
-`), "10", nil, "test2", "test3")
+`), "10", nil, "Test2", "Test3")
 }
 
 func TestAlternateSyntax(t *testing.T) {
@@ -196,23 +196,34 @@ tasks:
     - name: test1
       shell: echo 10
 
-    - name: test2
+    - name: Test2
       task: test1
-`), "10", nil, "test2")
+`), "10", nil, "Test2")
 }
 
 func TestComplexInput(t *testing.T) {
-    testEquals(t, []byte(`
+	testEquals(t, []byte(`
 tasks:
   - name: test
     shell: echo "{{#var1}}{{.}}{{/var1}}{{#var2}}{{.}}{{/var2}}{{#var2}}{{var3}}{{/var2}}"
 
-  - name: test2
+  - name: Test2
     test:
       var1: 
         - one
         - two
       var2: "hello"
       var3: "ok"
-`), "onetwohellook", nil, "test2")
+`), "onetwohellook", nil, "Test2")
+}
+
+func TestFlow(t *testing.T) {
+	testEquals(t, []byte(`
+tasks:
+ - name: test
+   shell: echo {{var}}
+
+ - name: Test2
+   test: { var: "hello" }
+`), "hello", nil, "Test2")
 }
