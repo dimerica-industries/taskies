@@ -30,7 +30,7 @@ func (t *ShellTask) Run(ctxt RunContext) error {
 	return c.Run()
 }
 
-func shellProvider(ps providerSet, data *taskData) (Task, error) {
+func shellDecoder(data *taskData) (Task, error) {
 	val := reflect.ValueOf(data.taskData)
 
 	if val.Kind() != reflect.String {

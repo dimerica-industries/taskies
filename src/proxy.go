@@ -33,9 +33,9 @@ func (t *ProxyTask) ExportData() []map[string]interface{} {
 	return append(t.task.ExportData(), t.baseTask.ExportData()...)
 }
 
-func proxyProviderFunc(t Task) provider {
-	return func(ps providerSet, data *taskData) (Task, error) {
-		Debugf("[PROXY PROVIDER] %v", data)
+func proxyDecoder(t Task) taskDecoder {
+	return func(data *taskData) (Task, error) {
+		Debugf("[PROXY DECODER] %v", data)
 
 		return &ProxyTask{
 			baseTask: baseTaskFromTaskData(data),

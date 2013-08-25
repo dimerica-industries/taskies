@@ -63,28 +63,30 @@ func (t *PipeTask) Run(ctxt RunContext) error {
 	return nil
 }
 
-func pipeProvider(ps providerSet, data *taskData) (Task, error) {
-	val := reflect.ValueOf(data.taskData)
+func pipeDecoder(ts taskDecoderSet) taskDecoder {
+	return func(data *taskData) (Task, error) {
+		val := reflect.ValueOf(data.taskData)
 
-	if val.Kind() != reflect.Slice {
-		return nil, fmt.Errorf("PipeProvider expects slice, %s found", val.Kind())
-	}
-
-	tasks := make([]Task, val.Len())
-
-	for i := 0; i < val.Len(); i++ {
-		d := val.Index(i).Elem().Interface()
-		task, err := ps.provide(d)
-
-		if err != nil {
-			return nil, err
+		if val.Kind() != reflect.Slice {
+			return nil, fmt.Errorf("PipeDecoder expects slice, %s found", val.Kind())
 		}
 
-		tasks[i] = task
-	}
+		tasks := make([]Task, val.Len())
 
-	return &PipeTask{
-		baseTask: baseTaskFromTaskData(data),
-		tasks:    tasks,
-	}, nil
+		for i := 0; i < val.Len(); i++ {
+			d := val.Index(i).Elem().Interface()
+			task, err := ts.decode(d)
+
+			if err != nil {
+				return nil, err
+			}
+
+			tasks[i] = task
+		}
+
+		return &PipeTask{
+			baseTask: baseTaskFromTaskData(data),
+			tasks:    tasks,
+		}, nil
+	}
 }

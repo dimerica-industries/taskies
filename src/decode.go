@@ -2,10 +2,36 @@ package src
 
 import (
 	"fmt"
-	"launchpad.net/goyaml"
 	"reflect"
 	"strings"
 )
+
+type taskDecoder func(*taskData) (Task, error)
+type taskDecoderSet map[string]taskDecoder
+
+func defaultTaskDecoders() taskDecoderSet {
+	ts := make(taskDecoderSet)
+
+	ts["shell"] = shellDecoder
+	ts["pipe"] = pipeDecoder(ts)
+	ts["tasks"] = compositeDecoder(ts)
+
+	return ts
+}
+
+func newDecoder(ns *Namespace) *decoder {
+	return &decoder{
+		ns:           ns,
+		taskDecoders: defaultTaskDecoders(),
+	}
+}
+
+type decoder struct {
+	ns           *Namespace
+	taskDecoders taskDecoderSet
+}
+
+type decodeFn func(reflect.Value) error
 
 type taskData struct {
 	task        string
@@ -24,10 +50,7 @@ func baseTaskFromTaskData(td *taskData) *baseTask {
 	}
 }
 
-type provider func(providerSet, *taskData) (Task, error)
-type providerSet map[string]provider
-
-func (ps providerSet) provide(data interface{}) (Task, error) {
+func (ps taskDecoderSet) decode(data interface{}) (Task, error) {
 	val := reflect.ValueOf(data)
 
 	if val.Kind() == reflect.String {
@@ -89,46 +112,13 @@ func (ps providerSet) provide(data interface{}) (Task, error) {
 		return nil, fmt.Errorf("No task named \"%s\" found", td.task)
 	}
 
-	t, err := prov(ps, td)
-	Debugf("[PROVIDER] [task=%#v] [data=%#v]", t, td)
+	t, err := prov(td)
+	Debugf("[TASK DECODER] [task=%#v] [data=%#v]", t, td)
 
 	return t, err
 }
 
-func NewTaskSet() *TaskSet {
-	return &TaskSet{
-		Env: NewEnv(),
-		providers: map[string]provider{
-			"shell": shellProvider,
-			"pipe":  pipeProvider,
-			"tasks": compositeProvider,
-		},
-		Tasks:           make(map[string]Task),
-		ExportedTasks:   make(map[string]Task),
-		UnexportedTasks: make(map[string]Task),
-	}
-}
-
-type TaskSet struct {
-	Env             *Env
-	providers       providerSet
-	Tasks           map[string]Task
-	ExportedTasks   map[string]Task
-	UnexportedTasks map[string]Task
-}
-
-func DecodeYAML(contents []byte, ts *TaskSet) error {
-	var data interface{}
-	err := goyaml.Unmarshal(contents, &data)
-
-	data = clean(data)
-
-	if err != nil {
-		return err
-	}
-
-	val := reflect.ValueOf(data)
-
+func (d *decoder) decode(val reflect.Value) error {
 	if val.Kind() != reflect.Map {
 		return fmt.Errorf("Expecting map, found %s", val.Kind())
 	}
@@ -137,29 +127,34 @@ func DecodeYAML(contents []byte, ts *TaskSet) error {
 
 	for _, k := range keys {
 		v := val.MapIndex(k).Elem()
+		var fn decodeFn
 
 		switch k.String() {
+		case "include":
+			fn = d.decodeIncludes
 		case "tasks":
-			err = decodeTasks(v, ts)
-
-			if err != nil {
-				return err
-			}
+			fn = d.decodeTasks
 		case "env":
-			err = decodeEnv(v, ts)
-
-			if err != nil {
-				return err
-			}
+			fn = d.decodeEnv
 		default:
 			return fmt.Errorf("Invalid key: %s", k.Elem().String())
+		}
+
+		err := fn(v)
+
+		if err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func decodeEnv(val reflect.Value, ts *TaskSet) error {
+func (d *decoder) decodeIncludes(val reflect.Value) error {
+	return nil
+}
+
+func (d *decoder) decodeEnv(val reflect.Value) error {
 	if val.Kind() != reflect.Map {
 		return fmt.Errorf("Expecting map, found %s", val.Kind())
 	}
@@ -170,13 +165,13 @@ func decodeEnv(val reflect.Value, ts *TaskSet) error {
 		ks := k.String()
 		vs := fmt.Sprintf("%v", val.MapIndex(k).Elem().Interface())
 
-		ts.Env.Set(ks, vs)
+		d.ns.env.Set(ks, vs)
 	}
 
 	return nil
 }
 
-func decodeTasks(val reflect.Value, ts *TaskSet) error {
+func (d *decoder) decodeTasks(val reflect.Value) error {
 	if val.Kind() != reflect.Slice {
 		return fmt.Errorf("Expecting slice, found %s", val.Kind())
 	}
@@ -186,7 +181,7 @@ func decodeTasks(val reflect.Value, ts *TaskSet) error {
 	for i := 0; i < l; i++ {
 		tval := val.Index(i).Elem()
 
-		if err := decodeTask(tval, ts); err != nil {
+		if err := d.decodeTask(tval); err != nil {
 			return err
 		}
 	}
@@ -194,8 +189,8 @@ func decodeTasks(val reflect.Value, ts *TaskSet) error {
 	return nil
 }
 
-func decodeTask(val reflect.Value, ts *TaskSet) error {
-	t, err := ts.providers.provide(val.Interface())
+func (d *decoder) decodeTask(val reflect.Value) error {
+	t, err := d.taskDecoders.decode(val.Interface())
 
 	if err != nil {
 		return err
@@ -208,37 +203,8 @@ func decodeTask(val reflect.Value, ts *TaskSet) error {
 		return fmt.Errorf("No name found")
 	}
 
-	if name[0] == lname[0] {
-		ts.UnexportedTasks[lname] = t
-	} else {
-		ts.ExportedTasks[lname] = t
-	}
-
-	ts.Tasks[lname] = t
-	ts.providers[lname] = proxyProviderFunc(t)
+	d.ns.AddTask(t)
+	d.taskDecoders[lname] = proxyDecoder(t)
 
 	return nil
-}
-
-func clean(val interface{}) interface{} {
-	if m, ok := val.(map[interface{}]interface{}); ok {
-		m2 := make(map[string]interface{})
-
-		for k, v := range m {
-			ks := fmt.Sprintf("%v", k)
-			m2[ks] = clean(v)
-		}
-
-		return m2
-	}
-
-	if sl, ok := val.([]interface{}); ok {
-		for i, v := range sl {
-			sl[i] = clean(v)
-		}
-
-		return sl
-	}
-
-	return fmt.Sprintf("%v", val)
 }

@@ -6,8 +6,8 @@ import (
 	"io"
 )
 
-func newBaseContext(env *Env, in io.Reader, out, err io.Writer) *baseContext {
-	return &baseContext{
+func newContext(env *Env, in io.Reader, out, err io.Writer) *runContext {
+	return &runContext{
 		env:        env,
 		in:         in,
 		out:        out,
@@ -17,7 +17,7 @@ func newBaseContext(env *Env, in io.Reader, out, err io.Writer) *baseContext {
 	}
 }
 
-type baseContext struct {
+type runContext struct {
 	env        *Env
 	in         io.Reader
 	out        io.Writer
@@ -26,23 +26,23 @@ type baseContext struct {
 	names      map[string]bool
 }
 
-func (c *baseContext) Env() *Env {
+func (c *runContext) Env() *Env {
 	return c.env
 }
 
-func (c *baseContext) In() io.Reader {
+func (c *runContext) In() io.Reader {
 	return c.in
 }
 
-func (c *baseContext) Out() io.Writer {
+func (c *runContext) Out() io.Writer {
 	return c.out
 }
 
-func (c *baseContext) Err() io.Writer {
+func (c *runContext) Err() io.Writer {
 	return c.err
 }
 
-func (c *baseContext) Run(t Task) *RunResult {
+func (c *runContext) Run(t Task) *RunResult {
 	c.childTasks = append(c.childTasks, t)
 	name := t.Name()
 
@@ -107,7 +107,7 @@ func (c *baseContext) Run(t Task) *RunResult {
 	}
 }
 
-func (c *baseContext) Clone(env *Env, in io.Reader, out, err io.Writer) RunContext {
+func (c *runContext) Clone(env *Env, in io.Reader, out, err io.Writer) RunContext {
 	if env == nil {
 		env = c.env
 	}
@@ -124,5 +124,5 @@ func (c *baseContext) Clone(env *Env, in io.Reader, out, err io.Writer) RunConte
 		err = c.err
 	}
 
-	return newBaseContext(env, in, out, err)
+	return newContext(env, in, out, err)
 }

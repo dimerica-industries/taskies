@@ -4,10 +4,9 @@ import (
 	"flag"
 	"fmt"
 	taskies "github.com/dimerica-industries/taskies/src"
-	"io/ioutil"
 	"os"
 	"runtime/debug"
-    "text/tabwriter"
+	"text/tabwriter"
 )
 
 const (
@@ -25,7 +24,7 @@ func main() {
 		}
 	}()
 
-    file := flag.String("f", DEFAULT_FILE, "Location of the taskie file")
+	file := flag.String("f", DEFAULT_FILE, "Location of the taskie file")
 	help := flag.Bool("h", false, "Show help")
 	list := flag.Bool("l", false, "List all available tasks")
 
@@ -38,46 +37,40 @@ func main() {
 		os.Exit(0)
 	}
 
-	ts := taskies.NewTaskSet()
+	rt := taskies.NewRuntime(os.Stdin, os.Stdout, os.Stderr)
+	_, err := rt.LoadNs(*file)
 
-    contents, err := ioutil.ReadFile(*file)
+	if err != nil {
+		panic("Cannot read " + *file)
+	}
 
-    if err != nil {
-        panic("Cannot read " + *file)
-    }
-
-    err = taskies.DecodeYAML(contents, ts)
-
-    if err != nil {
-        panic("YAML decode error: " + err.Error())
-    }
-
-    l := func() {
+	l := func() {
 		fmt.Printf("Available Tasks:\n")
-        w := new(tabwriter.Writer)
-        w.Init(os.Stdout, 0, 8, 0, '\t', 0)
+		w := new(tabwriter.Writer)
+		w.Init(os.Stdout, 0, 8, 0, '\t', 0)
 
-		for name, t := range ts.ExportedTasks {
+		for _, name := range rt.RootNs().ExportedTasks() {
+			t := rt.RootNs().ExportedTask(name)
+
 			fmt.Fprintf(w, "   %s\t%s\n", name, t.Description())
 		}
 
-        w.Flush()
-    }
+		w.Flush()
+	}
 
 	if *list {
-        l()
+		l()
 		os.Exit(0)
 	}
 
 	if len(tasks) == 0 {
 		flag.Usage()
-        fmt.Println()
-        l()
+		fmt.Println()
+		l()
 		os.Exit(1)
 	}
 
-	runner := taskies.NewRunner(ts, ts.Env, os.Stdin, os.Stdout, os.Stderr)
-	err = runner.Run(tasks...)
+	err = rt.Run(tasks...)
 
 	if err != nil {
 		panic(err)

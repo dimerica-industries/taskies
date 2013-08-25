@@ -3,9 +3,7 @@
 tasks:
   - name: Test
     description: Run go test on the codebase
-    shell: |
-      go test -i ./...
-      go test ./...
+    shell: go test ./...
 
   - name: Install
     description: build and install the taskies binary locally

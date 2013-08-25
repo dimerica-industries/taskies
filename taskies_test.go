@@ -18,19 +18,19 @@ func run(contents []byte, in io.Reader, tasks ...string) ([]byte, []byte, error)
 
 	out := bytes.NewBuffer([]byte{})
 	err := bytes.NewBuffer([]byte{})
-	ts := taskies.NewTaskSet()
-	e := taskies.DecodeYAML(contents, ts)
+
+	runtime := taskies.NewRuntime(in, out, err)
+	runtime.AddNs("root")
+	e := taskies.DecodeYAML(contents, runtime.RootNs())
 
 	if e != nil {
 		return nil, nil, e
 	}
 
-	run := taskies.NewRunner(ts, ts.Env, in, out, err)
-
 	if len(tasks) == 0 {
-		e = run.RunAll()
+		e = runtime.RunAll()
 	} else {
-		e = run.Run(tasks...)
+		e = runtime.Run(tasks...)
 	}
 
 	if e != nil {

@@ -22,28 +22,30 @@ func (t *CompositeTask) Run(ctxt RunContext) error {
 	return nil
 }
 
-func compositeProvider(ps providerSet, data *taskData) (Task, error) {
-	val := reflect.ValueOf(data.taskData)
+func compositeDecoder(td taskDecoderSet) taskDecoder {
+	return func(data *taskData) (Task, error) {
+		val := reflect.ValueOf(data.taskData)
 
-	if val.Kind() != reflect.Slice {
-		return nil, fmt.Errorf("CompositeProvider expects slice, %s found", val.Kind())
-	}
-
-	tasks := make([]Task, val.Len())
-
-	for i := 0; i < val.Len(); i++ {
-		d := val.Index(i).Elem().Interface()
-		task, err := ps.provide(d)
-
-		if err != nil {
-			return nil, err
+		if val.Kind() != reflect.Slice {
+			return nil, fmt.Errorf("CompositeDecoder expects slice, %s found", val.Kind())
 		}
 
-		tasks[i] = task
-	}
+		tasks := make([]Task, val.Len())
 
-	return &CompositeTask{
-		baseTask: baseTaskFromTaskData(data),
-		tasks:    tasks,
-	}, nil
+		for i := 0; i < val.Len(); i++ {
+			d := val.Index(i).Elem().Interface()
+			task, err := td.decode(d)
+
+			if err != nil {
+				return nil, err
+			}
+
+			tasks[i] = task
+		}
+
+		return &CompositeTask{
+			baseTask: baseTaskFromTaskData(data),
+			tasks:    tasks,
+		}, nil
+	}
 }
