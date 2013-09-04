@@ -6,8 +6,8 @@ import (
 	"reflect"
 )
 
-func template(tmpl interface{}, env *Env) interface{} {
-	if _, ok := tmpl.(*Env); ok {
+func template(tmpl interface{}, e *Env) interface{} {
+	if _, ok := tmpl.(*varSet); ok {
 		return tmpl
 	}
 
@@ -16,15 +16,15 @@ func template(tmpl interface{}, env *Env) interface{} {
 
 	switch r.Kind() {
 	case reflect.Interface:
-		return template(r.Elem().Interface(), env)
+		return template(r.Elem().Interface(), e)
 	case reflect.Map:
 		m := make(map[string]interface{})
 		keys := r.MapKeys()
 
 		for _, k := range keys {
 			v := r.MapIndex(k)
-			tk := template(k, env).(string)
-			tv := template(v.Interface(), env)
+			tk := template(k, e).(string)
+			tv := template(v.Interface(), e)
 
 			m[tk] = tv
 		}
@@ -36,7 +36,7 @@ func template(tmpl interface{}, env *Env) interface{} {
 
 		for i := 0; i < l; i++ {
 			v := r.Index(i).Elem().Interface()
-			sl[i] = template(v, env)
+			sl[i] = template(v, e)
 		}
 
 		return sl
@@ -44,9 +44,9 @@ func template(tmpl interface{}, env *Env) interface{} {
 		str = fmt.Sprintf("%v", tmpl)
 	}
 
-	out := mustache.Render(str, &finder{env})
+	out := mustache.Render(str, &finder{e})
 
-	Debugf("[TEMPLATE] [env=%s] [before=%s] [after=%s]", env.Id(), str, out)
+	Debugf("[TEMPLATE] [ENV=%p] [before=%s] [after=%s]", e, str, out)
 
 	return out
 }
@@ -56,7 +56,7 @@ type finder struct {
 }
 
 func (f *finder) Lookup(name string) reflect.Value {
-	if v := f.env.Get(name); v != nil {
+	if v := f.env.GetVar(name); v != nil {
 		return reflect.ValueOf(v)
 	}
 

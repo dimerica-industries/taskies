@@ -1,153 +1,111 @@
 package src
 
 import (
-	"fmt"
-	"reflect"
-	"strconv"
 	"strings"
 	"sync"
 )
 
 func NewEnv() *Env {
 	return &Env{
-		vals: make(map[string]interface{}),
+		vars:          newVarSet(),
+		tasks:         make([]string, 0),
+		exportedTasks: make([]string, 0),
 	}
 }
 
-// thread safe map of string -> interface{} with parent/child
-// scope
-//
-// eg - if B is child of A, and key xyz is requested in B
-// but doesn't exist, A will then be searched
-//
-// "." is used as an object delimeter, so get("a.b") is mapped to
-// get("a").get("b")
 type Env struct {
-	parent *Env
-	l      sync.RWMutex
-	vals   map[string]interface{}
+	parent        *Env
+	vars          *varSet
+	taskLock      sync.Mutex
+	tasks         []string
+	exportedTasks []string
 }
 
-func (e *Env) Id() string {
-	id := fmt.Sprintf("%p", e)
-
-	if e.IsRoot() {
-		return id
-	}
-
-	return e.Parent().Id() + "." + id
-}
-
-func (e *Env) Get(k string) interface{} {
-	e.l.RLock()
-	defer e.l.RUnlock()
-
-	v := e.get(k)
+func (e *Env) GetVar(k string) interface{} {
+	v := e.vars.get(k)
 
 	if v != nil || e.IsRoot() {
 		return v
 	}
 
-	return e.Parent().Get(k)
+	return e.parent.GetVar(k)
 }
 
-func (e *Env) get(k string) interface{} {
-	if k == "." {
-		return e.vals
-	}
-
-	var cur interface{} = e.vals
-	parts := strings.Split(k, ".")
-
-	for i, p := range parts {
-		if e2, ok := cur.(*Env); ok {
-			return e2.Get(strings.Join(parts[i:], "."))
-		}
-
-		r := reflect.ValueOf(cur)
-
-		switch r.Kind() {
-		case reflect.Map:
-			v := r.MapIndex(reflect.ValueOf(p))
-
-			if !v.IsValid() {
-				return nil
-			}
-
-			cur = v.Interface()
-		case reflect.Slice:
-			i, _ := strconv.Atoi(p)
-			v := r.Index(i)
-
-			if !v.IsValid() {
-				return nil
-			}
-
-			cur = v.Interface()
-		default:
-			return nil
-		}
-	}
-
-	return cur
-
-}
-
-func (e *Env) Set(k string, v interface{}) {
+func (e *Env) SetVar(k string, v interface{}) {
 	k = template(k, e).(string)
-	v = template(v, e)
 
-	e.l.Lock()
-	defer e.l.Unlock()
+	if ev, ok := v.(*Env); ok {
+		Debugf("[ENV SET VAR] [ENV=%p] [KEY=%#v] [VALUE=%p]", e, k, v)
+		v = ev.vars
+	} else {
+		Debugf("[ENV SET VAR] [ENV=%p] [KEY=%#v] [VALUE=%#v]", e, k, v)
+		v = template(v, e)
+	}
 
-	e.set(k, v)
+	e.vars.set(k, v)
 }
 
-func (e *Env) set(k string, v interface{}) {
-	Debugf("[ENV SET] %s %#v = %#v", e.Id(), k, v)
-	rv := reflect.ValueOf(v)
+func (e *Env) Tasks() []string {
+    return e.tasks
+}
 
-	parts := strings.Split(k, ".")
-	l := len(parts)
-	cur := reflect.ValueOf(e.vals)
+func (e *Env) ExportedTasks() []string {
+    return e.exportedTasks
+}
 
-	for i, p := range parts {
-		if e2, ok := cur.Interface().(*Env); ok {
-			e2.Set(strings.Join(parts[i:], "."), v)
-			return
-		}
+func (e *Env) GetTask(name string) Task {
+	lname := strings.ToLower(name)
+    t := e.vars.Get(lname)
+    root := e.IsRoot()
 
-		rp := reflect.ValueOf(p)
+    if t == nil {
+        if root {
+            return nil
+        }
 
-		if i == l-1 {
-			cur.SetMapIndex(rp, rv)
-			return
-		}
+        return e.parent.GetTask(name)
+    }
 
-		v := cur.MapIndex(rp)
+    tsk := t.(Task)
 
-		if v.IsValid() {
-			v = v.Elem()
-		}
-
-		if !v.IsValid() || v.Kind() != reflect.Map {
-			curv := make(map[string]interface{})
-			tmp := reflect.ValueOf(curv)
-			cur.SetMapIndex(rp, tmp)
-
-			cur = tmp
-		} else {
-			cur = v
-		}
+	if tsk != nil || e.IsRoot() {
+		return tsk
 	}
+
+	return e.parent.GetTask(name)
+}
+
+func (e *Env) GetExportedTask(name string) Task {
+    return e.GetTask(name)
+}
+
+func (e *Env) AddTask(t Task) {
+	e.taskLock.Lock()
+	defer e.taskLock.Unlock()
+
+	name := t.Name()
+	lname := strings.ToLower(name)
+
+	if name[0] != lname[0] {
+		e.exportedTasks = append(e.exportedTasks, lname)
+	}
+
+    e.tasks = append(e.tasks, lname)
+
+    e.vars.Set(lname, t)
+}
+
+func (e *Env) Child() *Env {
+	e2 := NewEnv()
+	e2.parent = e
+
+	Debugf("[ENV CHILD] [parent=%p] [child=%p]", e, e2)
+
+	return e2
 }
 
 func (e *Env) IsRoot() bool {
 	return e.parent == nil
-}
-
-func (e *Env) Parent() *Env {
-	return e.parent
 }
 
 func (e *Env) Root() *Env {
@@ -155,14 +113,5 @@ func (e *Env) Root() *Env {
 		return e
 	}
 
-	return e.Parent().Root()
-}
-
-func (e *Env) Child() *Env {
-	e2 := NewEnv()
-	e2.parent = e
-
-	Debugf("[NEW ENV] %s %s", e.Id(), e2.Id())
-
-	return e2
+	return e.parent.Root()
 }

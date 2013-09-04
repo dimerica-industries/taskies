@@ -4,48 +4,68 @@ import (
 	"io"
 )
 
-type RunResult struct {
-	out   []byte
-	err   []byte
-	error error
+type Task interface {
+	Name() string
+	Type() string
+	Description() string
+	Run(RunContext) error
+	Export() map[string]interface{}
 }
 
 type RunContext interface {
-	Env() *Env
 	In() io.Reader
 	Out() io.Writer
 	Err() io.Writer
-	Run(t Task) *RunResult
-	Clone(*Env, io.Reader, io.Writer, io.Writer) RunContext
+	Run(Task) error
+	Clone(io.Reader, io.Writer, io.Writer) RunContext
+	Env() *Env
 }
 
-type Task interface {
-	Type() string
-	Name() string
-	Description() string
-	Run(RunContext) error
-	ExportData() []map[string]interface{}
+type context struct {
+	in    io.Reader
+	out   io.Writer
+	err   io.Writer
+	runfn func(RunContext, Task) error
+	env   *Env
 }
 
-type baseTask struct {
-	typ         string
-	name        string
-	description string
-	exportData  []map[string]interface{}
+func (c *context) Env() *Env {
+	return c.env
 }
 
-func (t *baseTask) Type() string {
-	return t.typ
+func (c *context) In() io.Reader {
+	return c.in
 }
 
-func (t *baseTask) Name() string {
-	return t.name
+func (c *context) Out() io.Writer {
+	return c.out
 }
 
-func (t *baseTask) Description() string {
-	return t.description
+func (c *context) Err() io.Writer {
+	return c.err
 }
 
-func (t *baseTask) ExportData() []map[string]interface{} {
-	return t.exportData
+func (c *context) Run(t Task) error {
+	return c.runfn(c, t)
+}
+
+func (c *context) Clone(in io.Reader, out io.Writer, err io.Writer) RunContext {
+	if in == nil {
+		in = c.in
+	}
+
+	if out == nil {
+		out = c.out
+	}
+
+	if err == nil {
+		err = c.err
+	}
+
+	return &context{
+		in:    in,
+		out:   out,
+		err:   err,
+		runfn: c.runfn,
+	}
 }

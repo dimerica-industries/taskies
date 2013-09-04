@@ -30,17 +30,17 @@ func main() {
 
 	flag.Parse()
 
-	tasks := flag.Args()
+	task := flag.Arg(0)
 
 	if *help {
 		flag.Usage()
 		os.Exit(0)
 	}
 
-	rt := taskies.NewRuntime(os.Stdin, os.Stdout, os.Stderr)
-	_, err := rt.LoadNs(*file)
+	rt, err := taskies.LoadRuntime(*file, os.Stdin, os.Stdout, os.Stderr)
 
 	if err != nil {
+		taskies.Debugf(err)
 		panic("Cannot read " + *file)
 	}
 
@@ -49,8 +49,10 @@ func main() {
 		w := new(tabwriter.Writer)
 		w.Init(os.Stdout, 0, 8, 0, '\t', 0)
 
-		for _, name := range rt.RootNs().ExportedTasks() {
-			t := rt.RootNs().ExportedTask(name)
+		ns := rt.RootNs()
+
+		for _, name := range ns.Tasks() {
+			t := ns.GetTask(name)
 
 			fmt.Fprintf(w, "   %s\t%s\n", name, t.Description())
 		}
@@ -63,14 +65,14 @@ func main() {
 		os.Exit(0)
 	}
 
-	if len(tasks) == 0 {
+	if task == "" {
 		flag.Usage()
 		fmt.Println()
 		l()
 		os.Exit(1)
 	}
 
-	err = rt.Run(tasks...)
+	err = rt.Run(task)
 
 	if err != nil {
 		panic(err)

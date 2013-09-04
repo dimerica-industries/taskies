@@ -15,10 +15,21 @@ func Debug(fn func()) {
 
 // Run fmt.Printf on the passed in arguments only if the DEBUG
 // environment is set
-func Debugf(format string, args ...interface{}) {
+func Debugf(args ...interface{}) {
 	Debug(func() {
-		if format[len(format)-1] != '\n' {
-			format += "\n"
+		var format string
+
+		ftmp := args[0]
+
+		if f, ok := ftmp.(string); ok {
+			if f[len(f)-1] != '\n' {
+				f += "\n"
+			}
+
+			format = f
+			args = args[1:]
+		} else {
+			format = "%#v\n"
 		}
 
 		fmt.Printf("[DEBUG] "+format, args...)

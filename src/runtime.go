@@ -1,23 +1,59 @@
 package src
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"path/filepath"
+    "os"
+    "path/filepath"
 	"strings"
-	"sync"
+	"unicode"
 )
 
 var (
-	NsExists   = errors.New("NS already exists")
-	RootExists = errors.New("Root ns already exists")
+	MissingTask     = errors.New("Task doesn't exist")
+	TaskExists      = errors.New("Task with same name exists")
 )
 
+func LoadRuntime(path string, in io.Reader, out, err io.Writer) (*Runtime, error) {
+	rt := newRuntime(in, out, err)
+
+	ns, ast, e := rt.nsg.load(path)
+
+	if e != nil {
+		return nil, e
+	}
+
+    if e := os.Chdir(filepath.Dir(path)); e != nil {
+        return nil, e
+    }
+
+	rt.ns = ns
+
+    if err := execAst(rt, ns, ns.RootEnv(), ast); err != nil {
+        return nil, err
+    }
+
+	return rt, nil
+}
+
 func NewRuntime(in io.Reader, out, err io.Writer) *Runtime {
+	rt := newRuntime(in, out, err)
+
+	ns := newNs("__root__")
+	rt.nsg.add(ns)
+	rt.ns = ns
+
+	return rt
+}
+
+func newRuntime(in io.Reader, out, err io.Writer) *Runtime {
+	loader := newLoader()
+	nsg := newNsGroup(loader)
+
 	return &Runtime{
-		ns:  make(map[string]*Namespace),
+		nsg: nsg,
 		in:  in,
 		out: out,
 		err: err,
@@ -25,174 +61,110 @@ func NewRuntime(in io.Reader, out, err io.Writer) *Runtime {
 }
 
 type Runtime struct {
-	l    sync.Mutex
-	ns   map[string]*Namespace
-	root *Namespace
-	in   io.Reader
-	out  io.Writer
-	err  io.Writer
+	ns  Namespace
+	nsg *nsGroup
+	in  io.Reader
+	out io.Writer
+	err io.Writer
 }
 
-func (r *Runtime) Run(task ...string) error {
-	ctxt := newContext(r.RootNs().env, r.in, r.out, r.err)
+func (r *Runtime) In() io.Reader {
+	return r.in
+}
 
-	for _, name := range task {
-		t := r.RootNs().ExportedTask(name)
+func (r *Runtime) Out() io.Writer {
+	return r.out
+}
 
-		if t == nil {
-			return fmt.Errorf("Task %s does not exist", name)
+func (r *Runtime) Err() io.Writer {
+	return r.err
+}
+
+func (r *Runtime) Run(task string) error {
+	t := r.ns.RootEnv().GetTask(task)
+
+	if t == nil {
+		return MissingTask
+	}
+
+	return r.runWithDefaults(t)
+}
+
+func (r *Runtime) RootNs() Namespace {
+	return r.ns
+}
+
+func (r *Runtime) runWithDefaults(t Task) error {
+	return r.run(t, r.ns.RootEnv(), r.In(), r.Out(), r.Err())
+}
+
+func (r *Runtime) run(t Task, env *Env, in io.Reader, out, err io.Writer) error {
+	name := t.Name()
+
+	if name == "" {
+		name = t.Type()
+	}
+
+	if t2 := env.GetVar("TASKS." + name); t2 != nil {
+		i := 1
+
+		for {
+			n := fmt.Sprintf("%s_%d", name, i)
+
+			if t2 := env.GetVar("TASKS." + n); t2 == nil {
+				name = n
+				break
+			}
+
+			i++
 		}
+	}
 
-		res := ctxt.Run(t)
+	bout := new(bytes.Buffer)
+	berr := new(bytes.Buffer)
 
-		if res.error != nil {
-			return res.error
+	sout := io.MultiWriter(out, bout)
+	serr := io.MultiWriter(err, berr)
+
+	cenv := env.Child()
+
+	ctxt := &context{
+		in:  in,
+		out: sout,
+		err: serr,
+		runfn: func(c RunContext, t2 Task) error {
+			return r.run(t2, cenv, c.In(), c.Out(), c.Err())
+		},
+		env: cenv,
+	}
+
+	e := t.Run(ctxt)
+
+	if e != nil {
+		cenv.SetVar("ERROR", e.Error())
+	}
+
+	cenv.SetVar("OUT", strings.TrimRightFunc(string(bout.Bytes()), unicode.IsSpace))
+	cenv.SetVar("ERR", strings.TrimRightFunc(string(berr.Bytes()), unicode.IsSpace))
+
+	exp := t.Export()
+
+	for k, v := range exp {
+		cenv.SetVar(k, v)
+	}
+
+	env.SetVar("LAST", cenv)
+	env.SetVar("TASKS."+name, cenv)
+
+	return e
+}
+
+func execAst(r *Runtime, ns Namespace, e *Env, a *ast) error {
+	for _, ins := range a.instructions {
+		if err := ins.exec(r, ns, e); err != nil {
+			return err
 		}
 	}
 
 	return nil
-}
-
-func (r *Runtime) RunAll() error {
-	return r.Run(r.RootNs().ExportedTasks()...)
-}
-
-func (r *Runtime) LoadNs(path string) (*Namespace, error) {
-	r.l.Lock()
-	defer r.l.Unlock()
-
-	id, err := filepath.Abs(path)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if _, ok := r.ns[id]; ok {
-		return nil, fmt.Errorf("NS with id already exists")
-	}
-
-	contents, err := ioutil.ReadFile(path)
-
-	if err != nil {
-		return nil, err
-	}
-
-	ns, err := r.addNs(id)
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = DecodeYAML(contents, ns)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return ns, nil
-}
-
-func (r *Runtime) RootNs() *Namespace {
-	r.l.Lock()
-	defer r.l.Unlock()
-
-	return r.root
-}
-
-func (r *Runtime) addNs(id string) (*Namespace, error) {
-	if _, ok := r.ns[id]; ok {
-		return nil, NsExists
-	}
-
-	ns := &Namespace{
-		id:              id,
-		exportedTasks:   make(map[string]Task),
-		unexportedTasks: make(map[string]Task),
-		env:             NewEnv(),
-	}
-
-	r.ns[id] = ns
-
-	if r.root == nil {
-		r.root = ns
-	}
-
-	return ns, nil
-}
-
-func (r *Runtime) AddNs(id string) (*Namespace, error) {
-	r.l.Lock()
-	defer r.l.Unlock()
-
-	return r.addNs(id)
-}
-
-func (r *Runtime) Ns(id string) *Namespace {
-	r.l.Lock()
-	defer r.l.Unlock()
-
-	return r.ns[id]
-}
-
-type Namespace struct {
-	l               sync.Mutex
-	id              string
-	exportedTasks   map[string]Task
-	unexportedTasks map[string]Task
-	env             *Env
-}
-
-func (ns *Namespace) ExportedTasks() []string {
-	m := make([]string, len(ns.exportedTasks))
-	i := 0
-
-	for k, _ := range ns.exportedTasks {
-		m[i] = k
-		i++
-	}
-
-	return m
-}
-
-func (ns *Namespace) AddTask(t Task) error {
-	ns.l.Lock()
-	defer ns.l.Unlock()
-
-	n := t.Name()
-	ln := strings.ToLower(n)
-	m := ns.exportedTasks
-
-	if ln[0] == n[0] {
-		m = ns.unexportedTasks
-	}
-
-	if _, ok := m[ln]; ok {
-		return fmt.Errorf("Task with name %s already exists", n)
-	}
-
-	m[ln] = t
-
-	return nil
-}
-
-func (ns *Namespace) ExportedTask(name string) Task {
-	ns.l.Lock()
-	defer ns.l.Unlock()
-
-	ln := strings.ToLower(name)
-	return ns.exportedTasks[ln]
-}
-
-func (ns *Namespace) Task(name string) Task {
-	ns.l.Lock()
-	defer ns.l.Unlock()
-
-	ln := strings.ToLower(name)
-	m := ns.exportedTasks
-
-	if ln[0] == name[0] {
-		m = ns.unexportedTasks
-	}
-
-	return m[ln]
 }

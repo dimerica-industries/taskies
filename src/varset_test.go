@@ -8,8 +8,8 @@ import (
 
 var _ = fmt.Println
 
-func TestEnvBasicSet(t *testing.T) {
-	e := NewEnv()
+func TestVarBasicSet(t *testing.T) {
+	e := newVarSet()
 	e.Set("a", "b")
 
 	if e.Get("a") != "b" {
@@ -17,8 +17,8 @@ func TestEnvBasicSet(t *testing.T) {
 	}
 }
 
-func TestEnvNestedSet(t *testing.T) {
-	e := NewEnv()
+func TestVarNestedSet(t *testing.T) {
+	e := newVarSet()
 	e.Set("a.b", "c")
 
 	if e.Get("a.b") != "c" {
@@ -29,8 +29,8 @@ func TestEnvNestedSet(t *testing.T) {
 
 	r := reflect.ValueOf(e.Get("a.b"))
 
-	if r.Kind() != reflect.Map {
-		t.Fatalf("expected type map, found %s", r.Kind())
+    if r.Kind() != reflect.Map {
+		t.Fatalf("expected type VarSet, found %s", r.Kind())
 	}
 
 	e.Set("a.b.e", "f")
@@ -41,17 +41,5 @@ func TestEnvNestedSet(t *testing.T) {
 
 	if e.Get("a.b.e") != "f" {
 		t.Fatalf("expected \"f\", found %s", e.Get("a.b.e"))
-	}
-}
-
-func TestChainedEnv(t *testing.T) {
-	e1 := NewEnv()
-	e2 := NewEnv()
-
-	e2.Set("a.b.c", 3)
-	e1.Set("d.e", e2)
-
-	if e1.Get("d.e.a.b.c") != "3" {
-		t.Fatalf("Expected 3,found %s", e1.Get("d.e.a.b.c"))
 	}
 }

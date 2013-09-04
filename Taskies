@@ -1,14 +1,16 @@
 # vim: set filetype=yaml tabstop=2 shiftwidth=2 expandtab :
 
-tasks:
-  - name: Test
+- task:
+    name: Test
     description: Run go test on the codebase
     shell: go test ./...
 
-  - name: Install
+- task:
+    name: Install
     description: build and install the taskies binary locally
     shell: go install -v github.com/dimerica-industries/taskies
 
-  - name: Fmt
+- task:
+    name: Fmt
     description: run go fmt on the codebase
     shell: go fmt ./...
