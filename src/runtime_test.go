@@ -25,7 +25,7 @@ type funcTask struct {
 	name        string
 	description string
 	varName     string
-	export      map[string]interface{}
+	export      []map[string]interface{}
 	fn          func(RunContext) error
 }
 
@@ -49,7 +49,7 @@ func (t *funcTask) Type() string {
 	return "func"
 }
 
-func (t *funcTask) Export() map[string]interface{} {
+func (t *funcTask) Export() []map[string]interface{} {
 	return t.export
 }
 
@@ -237,6 +237,27 @@ func TestCustom(t *testing.T) {
 }
 
 func TestCustomSetEnv(t *testing.T) {
+	testEquals(t, [][]byte{[]byte(`
+- task:
+    name: test
+    shell: bash -c "echo -n 20"
+    set:
+      a: 50
+
+- task:
+    name: test2
+    run: test
+    set:
+      b: "{{a}}"
+
+- task:
+    name: Test3
+    run: 
+      - test2
+      - shell: echo {{LAST.a}}
+
+`)}, "2050", nil, "Test3")
+
 	testEquals(t, [][]byte{[]byte(`
 - task:
     name: test

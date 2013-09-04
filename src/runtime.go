@@ -25,7 +25,10 @@ func LoadRuntime(path string, in io.Reader, out, err io.Writer) (*Runtime, error
 		return nil, e
 	}
 
-	if e := os.Chdir(filepath.Dir(path)); e != nil {
+	p := filepath.Dir(path)
+	Debugf("[CHDIR] %s", p)
+
+	if e := os.Chdir(p); e != nil {
 		return nil, e
 	}
 
@@ -149,8 +152,10 @@ func (r *Runtime) run(t Task, env *Env, in io.Reader, out, err io.Writer) error 
 
 	exp := t.Export()
 
-	for k, v := range exp {
-		cenv.SetVar(k, v)
+	for _, vars := range exp {
+		for k, v := range vars {
+			cenv.SetVar(k, v)
+		}
 	}
 
 	env.SetVar("LAST", cenv)

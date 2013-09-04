@@ -12,7 +12,7 @@ type proxyTask struct {
 	typ         string
 	varName     string
 	task        Task
-	export      map[string]interface{}
+	export      []map[string]interface{}
 	args        reflect.Value
 }
 
@@ -24,7 +24,7 @@ func (t *proxyTask) Description() string {
 	return t.description
 }
 
-func (t *proxyTask) Export() map[string]interface{} {
+func (t *proxyTask) Export() []map[string]interface{} {
 	return t.export
 }
 
@@ -54,7 +54,7 @@ type shellTask struct {
 	description string
 	cmd         string
 	args        []string
-	export      map[string]interface{}
+	export      []map[string]interface{}
 }
 
 func (t *shellTask) Type() string {
@@ -73,7 +73,7 @@ func (t *shellTask) Description() string {
 	return t.description
 }
 
-func (t *shellTask) Export() map[string]interface{} {
+func (t *shellTask) Export() []map[string]interface{} {
 	return t.export
 }
 
@@ -101,7 +101,7 @@ type compositeTask struct {
 	description string
 	tasks       []Task
 	typ         string
-	export      map[string]interface{}
+	export      []map[string]interface{}
 }
 
 func (t *compositeTask) Type() string {
@@ -120,7 +120,7 @@ func (t *compositeTask) Description() string {
 	return t.description
 }
 
-func (t *compositeTask) Export() map[string]interface{} {
+func (t *compositeTask) Export() []map[string]interface{} {
 	return t.export
 }
 
@@ -139,7 +139,7 @@ type pipeTask struct {
 	varName     string
 	description string
 	typ         string
-	export      map[string]interface{}
+	export      []map[string]interface{}
 	tasks       []Task
 }
 
@@ -155,7 +155,7 @@ func (t *pipeTask) Description() string {
 	return t.description
 }
 
-func (t *pipeTask) Export() map[string]interface{} {
+func (t *pipeTask) Export() []map[string]interface{} {
 	return t.export
 }
 

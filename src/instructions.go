@@ -316,16 +316,20 @@ func task(ns Namespace, name string, description string, export map[string]inter
 	for _, rt := range tsks.tasks {
 		name := name
 		desc := description
-		exp := export
 
 		if composite {
 			name = ""
 			desc = ""
-			exp = make(map[string]interface{})
 		}
 
 		switch rt.task {
 		case "shell":
+			exp := []map[string]interface{}{export}
+
+			if composite {
+				exp = make([]map[string]interface{}, 0)
+			}
+
 			task := &shellTask{
 				name:        name,
 				description: desc,
@@ -346,8 +350,10 @@ func task(ns Namespace, name string, description string, export map[string]inter
 				return nil, fmt.Errorf("Missing task \"%s\"", rt.task)
 			}
 
-			if composite {
-				exp = task.Export()
+			exp := task.Export()
+
+			if !composite {
+				exp = append(exp, export)
 			}
 
 			proxy := &proxyTask{
@@ -373,7 +379,7 @@ func task(ns Namespace, name string, description string, export map[string]inter
 				description: description,
 				typ:         name,
 				tasks:       tasks,
-				export:      export,
+				export:      []map[string]interface{}{export},
 			}
 		} else {
 			task = &compositeTask{
@@ -381,12 +387,14 @@ func task(ns Namespace, name string, description string, export map[string]inter
 				description: description,
 				typ:         name,
 				tasks:       tasks,
-				export:      export,
+				export:      []map[string]interface{}{export},
 			}
 		}
 	} else {
 		task = tasks[0]
 	}
+
+	Debugf("[TASK CREATE] %#v", task)
 
 	return task, nil
 }

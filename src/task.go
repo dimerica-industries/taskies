@@ -9,7 +9,7 @@ type Task interface {
 	Type() string
 	Description() string
 	Run(RunContext) error
-	Export() map[string]interface{}
+	Export() []map[string]interface{}
 	Var() string
 }
 
