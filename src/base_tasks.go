@@ -12,6 +12,7 @@ type proxyTask struct {
 	typ         string
 	varName     string
 	task        Task
+	export      map[string]interface{}
 	args        reflect.Value
 }
 
@@ -24,7 +25,7 @@ func (t *proxyTask) Description() string {
 }
 
 func (t *proxyTask) Export() map[string]interface{} {
-	return t.task.Export()
+	return t.export
 }
 
 func (t *proxyTask) Type() string {

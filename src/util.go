@@ -3,6 +3,7 @@ package src
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 // Run the specified function only if the DEBUG environment
@@ -29,7 +30,7 @@ func Debugf(args ...interface{}) {
 			format = f
 			args = args[1:]
 		} else {
-			format = "%#v\n"
+			format = strings.Repeat("[%#v] ", len(args)) + "\n"
 		}
 
 		fmt.Printf("[DEBUG] "+format, args...)

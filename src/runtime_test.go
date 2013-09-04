@@ -252,6 +252,26 @@ func TestCustomSetEnv(t *testing.T) {
       - shell: echo {{LAST.x}}
       - shell: echo {{TASKS.test_1.x}}
 `)}, "202050\n50", nil, "Test2")
+
+	testEquals(t, [][]byte{[]byte(`
+- task:
+    name: test
+    shell: bash -c "echo -n 20"
+
+- task:
+    name: test2
+    run: test
+    set:
+      x: 50
+
+- task:
+    name: Test2
+    run:
+      - test2
+      - test2
+      - shell: echo {{LAST.x}}
+      - shell: echo {{TASKS.test2_1.x}}
+`)}, "202050\n50", nil, "Test2")
 }
 
 func TestDecodeEnv(t *testing.T) {
@@ -422,6 +442,7 @@ func TestTaskVar(t *testing.T) {
     
 - shell: echo {{x.OUT}}
 `)}, "3\n3", nil)
+
 	testEquals(t, [][]byte{[]byte(`
 - task:
     name: Hello

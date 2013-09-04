@@ -346,6 +346,10 @@ func task(ns Namespace, name string, description string, export map[string]inter
 				return nil, fmt.Errorf("Missing task \"%s\"", rt.task)
 			}
 
+			if composite {
+				exp = task.Export()
+			}
+
 			proxy := &proxyTask{
 				name:        name,
 				description: desc,
@@ -353,6 +357,7 @@ func task(ns Namespace, name string, description string, export map[string]inter
 				task:        task,
 				args:        rt.args,
 				varName:     rt.varName,
+				export:      exp,
 			}
 
 			tasks = append(tasks, proxy)
