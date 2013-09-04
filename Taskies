@@ -14,3 +14,13 @@
     name: Fmt
     description: run go fmt on the codebase
     shell: go fmt ./...
+
+- task:
+    name: Dist
+    description: Cross compile taskies
+    shell: |
+      rm -rf ./dist
+      mkdir -p ./dist
+      GOARCH=amd64 GOOS=darwin sh -c 'go build -o dist/${GOOS}_${GOARCH}/taskies github.com/dimerica-industries/taskies'
+      GOARCH=amd64 GOOS=linux sh -c 'go build -o dist/${GOOS}_${GOARCH}/taskies github.com/dimerica-industries/taskies'
+      GOARCH=386 GOOS=linux sh -c 'go build -o dist/${GOOS}_${GOARCH}/taskies github.com/dimerica-industries/taskies'
