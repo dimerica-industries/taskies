@@ -5,15 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
-    "os"
-    "path/filepath"
+	"os"
+	"path/filepath"
 	"strings"
 	"unicode"
 )
 
 var (
-	MissingTask     = errors.New("Task doesn't exist")
-	TaskExists      = errors.New("Task with same name exists")
+	MissingTask = errors.New("Task doesn't exist")
+	TaskExists  = errors.New("Task with same name exists")
 )
 
 func LoadRuntime(path string, in io.Reader, out, err io.Writer) (*Runtime, error) {
@@ -25,15 +25,15 @@ func LoadRuntime(path string, in io.Reader, out, err io.Writer) (*Runtime, error
 		return nil, e
 	}
 
-    if e := os.Chdir(filepath.Dir(path)); e != nil {
-        return nil, e
-    }
+	if e := os.Chdir(filepath.Dir(path)); e != nil {
+		return nil, e
+	}
 
 	rt.ns = ns
 
-    if err := execAst(rt, ns, ns.RootEnv(), ast); err != nil {
-        return nil, err
-    }
+	if err := execAst(rt, ns, ns.RootEnv(), ast); err != nil {
+		return nil, err
+	}
 
 	return rt, nil
 }

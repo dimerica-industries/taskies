@@ -5,7 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-    "strconv"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -60,12 +60,12 @@ func TestFuncRun(t *testing.T) {
 	r, _ := rt("", nil)
 
 	tk := &funcTask{
-        name: "test",
-        fn: func(r RunContext) error {
-            r.Out().Write([]byte("HELLO"))
-            return nil
-        },
-    }
+		name: "test",
+		fn: func(r RunContext) error {
+			r.Out().Write([]byte("HELLO"))
+			return nil
+		},
+	}
 
 	r.ns.RootEnv().AddTask(tk)
 	err := r.Run("test")
@@ -110,43 +110,43 @@ func TestLoad(t *testing.T) {
 func newTmpdir() (*tmpdir, error) {
 	d, err := ioutil.TempDir("", "taskies_test")
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    return &tmpdir{d, 0}, nil
+	return &tmpdir{d, 0}, nil
 }
 
 type tmpdir struct {
-    dir string
-    i int
+	dir string
+	i   int
 }
 
 func (t *tmpdir) cleanup() error {
-    return os.Remove(t.dir)
+	return os.Remove(t.dir)
 }
 
 func (t *tmpdir) addFile(contents []byte) (string, error) {
-    n := strconv.Itoa(t.i)
-    t.i++
+	n := strconv.Itoa(t.i)
+	t.i++
 
-    f, err := os.Create(t.dir + "/" + n)
+	f, err := os.Create(t.dir + "/" + n)
 
-    if err != nil {
-        return "", err
-    }
+	if err != nil {
+		return "", err
+	}
 
-    _, err = f.Write(contents)
+	_, err = f.Write(contents)
 
-    if err != nil {
-        return "", err
-    }
+	if err != nil {
+		return "", err
+	}
 
-    return f.Name(), f.Close()
+	return f.Name(), f.Close()
 }
 
 func testEquals(t *testing.T, yaml [][]byte, val string, in io.Reader, tasks ...string) {
-    d, err := newTmpdir()
+	d, err := newTmpdir()
 
 	if err != nil {
 		t.Fatal(err)
@@ -154,17 +154,17 @@ func testEquals(t *testing.T, yaml [][]byte, val string, in io.Reader, tasks ...
 
 	defer d.cleanup()
 
-    var root string
+	var root string
 
-    for _, y := range yaml {
-        n, err := d.addFile(y)
+	for _, y := range yaml {
+		n, err := d.addFile(y)
 
-        if err != nil {
-            t.Fatal(err)
-        }
+		if err != nil {
+			t.Fatal(err)
+		}
 
-        root = n
-    }
+		root = n
+	}
 
 	r, err := rt(root, in)
 
@@ -395,16 +395,16 @@ func TestInitialRun(t *testing.T) {
 }
 
 func TestInclude(t *testing.T) {
-    testEquals(t, [][]byte{
-        []byte(`
+	testEquals(t, [][]byte{
+		[]byte(`
 - task:
     name: Hello
     shell: echo 3
 `),
-        []byte(`
+		[]byte(`
 - include: { other: ./0 }
 - other.Hello
 
 `),
-    }, "3", nil)
+	}, "3", nil)
 }

@@ -18,8 +18,8 @@ func decodeInstruction(k string, v reflect.Value) (instruction, error) {
 	case "pipe":
 		ins = newRunTasks()
 		ins.(*runTasks).pipe = true
-    case "include":
-        ins = newIncludeNs()
+	case "include":
+		ins = newIncludeNs()
 	default:
 		ins = newRunTasks()
 		v = reflect.ValueOf(map[string]interface{}{k: v.Interface()})
@@ -38,78 +38,78 @@ type instruction interface {
 }
 
 func newIncludeNs() *includeNs {
-    return &includeNs{make([]*_ns, 0)}
+	return &includeNs{make([]*_ns, 0)}
 }
 
 type includeNs struct {
-    ns []*_ns
+	ns []*_ns
 }
 
 type _ns struct {
-    alias string
-    path string
+	alias string
+	path  string
 }
 
 func (t *includeNs) decode(data reflect.Value) error {
-    k := data.Kind()
+	k := data.Kind()
 
-    if k == reflect.String {
-        t.ns = append(t.ns, &_ns{"", data.String()})
-        return nil
-    }
+	if k == reflect.String {
+		t.ns = append(t.ns, &_ns{"", data.String()})
+		return nil
+	}
 
-    if k == reflect.Map {
-        data = reflect.ValueOf([]interface{}{data.Interface()})
-        k = reflect.Slice
-    }
+	if k == reflect.Map {
+		data = reflect.ValueOf([]interface{}{data.Interface()})
+		k = reflect.Slice
+	}
 
-    if k != reflect.Slice {
-        return fmt.Errorf("include directive must be a list")
-    }
+	if k != reflect.Slice {
+		return fmt.Errorf("include directive must be a list")
+	}
 
-    l := data.Len()
+	l := data.Len()
 
-    for i := 0; i < l; i++ {
-        v := data.Index(i).Elem()
+	for i := 0; i < l; i++ {
+		v := data.Index(i).Elem()
 
-        if v.Kind() == reflect.String {
-            t.ns = append(t.ns, &_ns{"", v.String()})
-            continue
-        }
+		if v.Kind() == reflect.String {
+			t.ns = append(t.ns, &_ns{"", v.String()})
+			continue
+		}
 
-        if v.Kind() != reflect.Map {
-            return fmt.Errorf("include item must be a string or map '{alias: path}'")
-        }
+		if v.Kind() != reflect.Map {
+			return fmt.Errorf("include item must be a string or map '{alias: path}'")
+		}
 
-        keys := v.MapKeys()
+		keys := v.MapKeys()
 
-        for _, k := range keys {
-            vv := v.MapIndex(k).Elem()
-            ks := k.String()
+		for _, k := range keys {
+			vv := v.MapIndex(k).Elem()
+			ks := k.String()
 
-            t.ns = append(t.ns, &_ns{ks, vv.String()})
-        }
-    }
+			t.ns = append(t.ns, &_ns{ks, vv.String()})
+		}
+	}
 
-    return nil
+	return nil
 }
 
 func (t *includeNs) exec(r *Runtime, ns Namespace, e *Env) error {
-    for _, ns := range t.ns {
-        ns2, ast, err := r.nsg.load(ns.path)
+	for _, ns := range t.ns {
+		ns2, ast, err := r.nsg.load(ns.path)
 
-        if err != nil {
-            return err
-        }
+		if err != nil {
+			return err
+		}
 
-        if err = execAst(r, ns2, ns2.RootEnv(), ast); err != nil {
-            return err
-        }
+		if err = execAst(r, ns2, ns2.RootEnv(), ast); err != nil {
+			return err
+		}
 
-        e.SetVar(ns.alias, ns2.RootEnv())
-    }
+		e.SetVar(ns.alias, ns2.RootEnv())
+	}
 
-    return nil
+	return nil
 }
 
 func newDefineTask() *defineTask {

@@ -70,27 +70,27 @@ func (a *ast) decode(data reflect.Value) error {
 func (a *ast) decodeInstruction(r reflect.Value) error {
 	k := r.Kind()
 
-    var (
-        key string
-        val reflect.Value
-    )
+	var (
+		key string
+		val reflect.Value
+	)
 
-    if k == reflect.String {
-        key = "run"
-        val = r
-    } else {
-        if k != reflect.Map {
-            return invalidInstructionType
-        }
+	if k == reflect.String {
+		key = "run"
+		val = r
+	} else {
+		if k != reflect.Map {
+			return invalidInstructionType
+		}
 
-        if r.Len() != 1 {
-            return invalidInstructionLen
-        }
+		if r.Len() != 1 {
+			return invalidInstructionLen
+		}
 
-        k := r.MapKeys()[0]
-        key = k.String()
-        val = r.MapIndex(k).Elem()
-    }
+		k := r.MapKeys()[0]
+		key = k.String()
+		val = r.MapIndex(k).Elem()
+	}
 
 	ins, err := decodeInstruction(key, val)
 

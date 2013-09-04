@@ -46,27 +46,27 @@ func (e *Env) SetVar(k string, v interface{}) {
 }
 
 func (e *Env) Tasks() []string {
-    return e.tasks
+	return e.tasks
 }
 
 func (e *Env) ExportedTasks() []string {
-    return e.exportedTasks
+	return e.exportedTasks
 }
 
 func (e *Env) GetTask(name string) Task {
 	lname := strings.ToLower(name)
-    t := e.vars.Get(lname)
-    root := e.IsRoot()
+	t := e.vars.Get(lname)
+	root := e.IsRoot()
 
-    if t == nil {
-        if root {
-            return nil
-        }
+	if t == nil {
+		if root {
+			return nil
+		}
 
-        return e.parent.GetTask(name)
-    }
+		return e.parent.GetTask(name)
+	}
 
-    tsk := t.(Task)
+	tsk := t.(Task)
 
 	if tsk != nil || e.IsRoot() {
 		return tsk
@@ -76,7 +76,7 @@ func (e *Env) GetTask(name string) Task {
 }
 
 func (e *Env) GetExportedTask(name string) Task {
-    return e.GetTask(name)
+	return e.GetTask(name)
 }
 
 func (e *Env) AddTask(t Task) {
@@ -90,9 +90,9 @@ func (e *Env) AddTask(t Task) {
 		e.exportedTasks = append(e.exportedTasks, lname)
 	}
 
-    e.tasks = append(e.tasks, lname)
+	e.tasks = append(e.tasks, lname)
 
-    e.vars.Set(lname, t)
+	e.vars.Set(lname, t)
 }
 
 func (e *Env) Child() *Env {

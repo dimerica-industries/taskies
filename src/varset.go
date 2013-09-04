@@ -19,9 +19,9 @@ func newVarSet() *varSet {
 // "." is used as an object delimeter, so get("a.b") is mapped to
 // get("a").get("b")
 type varSet struct {
-	l    sync.RWMutex
-	vals map[string]interface{}
-    exported map[string]bool
+	l        sync.RWMutex
+	vals     map[string]interface{}
+	exported map[string]bool
 }
 
 func (e *varSet) Get(k string) interface{} {
@@ -45,7 +45,7 @@ func (e *varSet) get(k string) interface{} {
 		}
 
 		r := reflect.ValueOf(cur)
-        kind := r.Kind()
+		kind := r.Kind()
 
 		switch {
 		case kind == reflect.Map:
@@ -87,9 +87,9 @@ func (e *varSet) set(k string, v interface{}) {
 	parts := strings.Split(k, ".")
 	l := len(parts)
 
-    if l == 0 {
-        return
-    }
+	if l == 0 {
+		return
+	}
 
 	cur := reflect.ValueOf(e.vals)
 

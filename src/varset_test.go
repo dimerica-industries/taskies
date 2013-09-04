@@ -29,7 +29,7 @@ func TestVarNestedSet(t *testing.T) {
 
 	r := reflect.ValueOf(e.Get("a.b"))
 
-    if r.Kind() != reflect.Map {
+	if r.Kind() != reflect.Map {
 		t.Fatalf("expected type VarSet, found %s", r.Kind())
 	}
 
