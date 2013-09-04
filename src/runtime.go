@@ -156,6 +156,10 @@ func (r *Runtime) run(t Task, env *Env, in io.Reader, out, err io.Writer) error 
 	env.SetVar("LAST", cenv)
 	env.SetVar("TASKS."+name, cenv)
 
+	if t.Var() != "" {
+		env.SetVar(t.Var(), cenv)
+	}
+
 	return e
 }
 

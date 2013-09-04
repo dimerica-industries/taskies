@@ -10,6 +10,7 @@ type proxyTask struct {
 	name        string
 	description string
 	typ         string
+	varName     string
 	task        Task
 	args        reflect.Value
 }
@@ -30,6 +31,10 @@ func (t *proxyTask) Type() string {
 	return t.typ
 }
 
+func (t *proxyTask) Var() string {
+	return t.varName
+}
+
 func (t *proxyTask) Run(r RunContext) error {
 	if t.args.Kind() == reflect.Map {
 		keys := t.args.MapKeys()
@@ -44,6 +49,7 @@ func (t *proxyTask) Run(r RunContext) error {
 
 type shellTask struct {
 	name        string
+	varName     string
 	description string
 	cmd         string
 	args        []string
@@ -52,6 +58,10 @@ type shellTask struct {
 
 func (t *shellTask) Type() string {
 	return "shell"
+}
+
+func (t *shellTask) Var() string {
+	return t.varName
 }
 
 func (t *shellTask) Name() string {
@@ -86,6 +96,7 @@ func (t *shellTask) Run(r RunContext) error {
 
 type compositeTask struct {
 	name        string
+	varName     string
 	description string
 	tasks       []Task
 	typ         string
@@ -94,6 +105,10 @@ type compositeTask struct {
 
 func (t *compositeTask) Type() string {
 	return t.typ
+}
+
+func (t *compositeTask) Var() string {
+	return t.varName
 }
 
 func (t *compositeTask) Name() string {
@@ -120,10 +135,15 @@ func (t *compositeTask) Run(r RunContext) error {
 
 type pipeTask struct {
 	name        string
+	varName     string
 	description string
 	typ         string
 	export      map[string]interface{}
 	tasks       []Task
+}
+
+func (t *pipeTask) Var() string {
+	return t.varName
 }
 
 func (t *pipeTask) Name() string {

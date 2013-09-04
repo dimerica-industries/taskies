@@ -9,7 +9,7 @@ func TestParseRun(t *testing.T) {
 - run:
     task: shell
     args: hello
-    assign: hello
+    var: hello
 `)
 	ast, err := parseBytes(yaml)
 
@@ -37,8 +37,8 @@ func TestParseRun(t *testing.T) {
 		t.Fatal("Expect task to be 'shell'")
 	}
 
-	if task.assign != "hello" {
-		t.Fatal("Expect assign to be 'hello'")
+	if task.varName != "hello" {
+		t.Fatal("Expect var to be 'hello'")
 	}
 
 	if task.args.String() != "hello" {
@@ -51,10 +51,10 @@ func TestParseMany(t *testing.T) {
 - run:
     - task: shell
       args: hello
-      assign: hello
+      var: hello
     - task: shell
       args: hello
-      assign: hello
+      var: hello
 `)
 
 	ast, err := parseBytes(yaml)

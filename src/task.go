@@ -10,6 +10,7 @@ type Task interface {
 	Description() string
 	Run(RunContext) error
 	Export() map[string]interface{}
+	Var() string
 }
 
 type RunContext interface {

@@ -24,12 +24,17 @@ func rt(p string, in io.Reader) (*Runtime, error) {
 type funcTask struct {
 	name        string
 	description string
+	varName     string
 	export      map[string]interface{}
 	fn          func(RunContext) error
 }
 
 func (t *funcTask) Run(r RunContext) error {
 	return t.fn(r)
+}
+
+func (t *funcTask) Var() string {
+	return t.varName
 }
 
 func (t *funcTask) Name() string {
@@ -407,4 +412,23 @@ func TestInclude(t *testing.T) {
 
 `),
 	}, "3", nil)
+}
+
+func TestTaskVar(t *testing.T) {
+	testEquals(t, [][]byte{[]byte(`
+- run:
+    var: x
+    shell: echo 3
+    
+- shell: echo {{x.OUT}}
+`)}, "3\n3", nil)
+	testEquals(t, [][]byte{[]byte(`
+- task:
+    name: Hello
+    run:
+      - shell: echo 3
+        var: x
+
+      - shell: echo {{x.OUT}}
+`)}, "3\n3", nil)
 }

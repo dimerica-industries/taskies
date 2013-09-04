@@ -236,9 +236,9 @@ func newRunTask() *runTask {
 }
 
 type runTask struct {
-	task   string
-	assign string
-	args   reflect.Value
+	task    string
+	varName string
+	args    reflect.Value
 }
 
 func (t *runTask) decode(data reflect.Value) error {
@@ -260,8 +260,8 @@ func (t *runTask) decode(data reflect.Value) error {
 		switch ks {
 		case "task":
 			t.task = v.String()
-		case "assign":
-			t.assign = v.String()
+		case "var":
+			t.varName = v.String()
 		case "args":
 			t.args = v
 		default:
@@ -316,11 +316,12 @@ func task(ns Namespace, name string, description string, export map[string]inter
 	for _, rt := range tsks.tasks {
 		name := name
 		desc := description
+		exp := export
 
 		if composite {
 			name = ""
 			desc = ""
-			export = make(map[string]interface{})
+			exp = make(map[string]interface{})
 		}
 
 		switch rt.task {
@@ -333,7 +334,8 @@ func task(ns Namespace, name string, description string, export map[string]inter
 					"-c",
 					rt.args.String(),
 				},
-				export: export,
+				export:  exp,
+				varName: rt.varName,
 			}
 
 			tasks = append(tasks, task)
@@ -350,6 +352,7 @@ func task(ns Namespace, name string, description string, export map[string]inter
 				typ:         rt.task,
 				task:        task,
 				args:        rt.args,
+				varName:     rt.varName,
 			}
 
 			tasks = append(tasks, proxy)
