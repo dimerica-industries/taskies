@@ -53,6 +53,8 @@ type nsGroup struct {
 }
 
 func (n *nsGroup) load(path string) (Namespace, *ast, error) {
+    Debugf("[LOADING] %s", path)
+
 	n.Lock()
 	defer n.Unlock()
 

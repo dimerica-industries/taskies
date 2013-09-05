@@ -2,6 +2,8 @@ package src
 
 import (
 	"fmt"
+    "os"
+    "path/filepath"
 	"reflect"
 )
 
@@ -96,15 +98,39 @@ func (t *includeNs) decode(data reflect.Value) error {
 
 func (t *includeNs) exec(r *Runtime, ns Namespace, e *Env) error {
 	for _, ns := range t.ns {
-		ns2, ast, err := r.nsg.load(ns.path)
+        p, err := filepath.Abs(ns.path)
+
+        if err != nil {
+            return err
+        }
+
+		ns2, ast, err := r.nsg.load(p)
 
 		if err != nil {
 			return err
 		}
 
+        pwd, err := os.Getwd()
+
+        if err != nil {
+            return err
+        }
+
+        err = os.Chdir(filepath.Dir(p))
+
+        if err != nil {
+            return err
+        }
+
 		if err = execAst(r, ns2, ns2.RootEnv(), ast); err != nil {
 			return err
 		}
+
+        err = os.Chdir(pwd)
+
+        if err != nil {
+            return err
+        }
 
 		e.SetVar(ns.alias, ns2.RootEnv())
 	}

@@ -112,7 +112,7 @@ func (e *varSet) set(k string, v interface{}) {
 			v = v.Elem()
 		}
 
-		if !v.IsValid() || v.Kind() != reflect.Map {
+		if !v.IsValid() || (v.Kind() != reflect.Map && !isVarSet(v.Interface())) {
 			curv := make(map[string]interface{})
 			tmp := reflect.ValueOf(curv)
 			cur.SetMapIndex(rp, tmp)
@@ -122,4 +122,13 @@ func (e *varSet) set(k string, v interface{}) {
 			cur = v
 		}
 	}
+}
+
+func isVarSet(d interface{}) bool {
+    if d == nil {
+        return false
+    }
+
+    _, ok := d.(*varSet)
+    return ok
 }

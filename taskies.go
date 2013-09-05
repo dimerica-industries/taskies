@@ -5,6 +5,7 @@ import (
 	"fmt"
 	taskies "github.com/dimerica-industries/taskies/src"
 	"os"
+    "path/filepath"
 	"runtime/debug"
 	"text/tabwriter"
 )
@@ -37,7 +38,13 @@ func main() {
 		os.Exit(0)
 	}
 
-	rt, err := taskies.LoadRuntime(*file, os.Stdin, os.Stdout, os.Stderr)
+    f, err := filepath.Abs(*file)
+
+    if err != nil {
+        panic(err)
+    }
+
+	rt, err := taskies.LoadRuntime(f, os.Stdin, os.Stdout, os.Stderr)
 
 	if err != nil {
 		taskies.Debugf(err)

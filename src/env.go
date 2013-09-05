@@ -10,6 +10,7 @@ func NewEnv() *Env {
 		vars:          newVarSet(),
 		tasks:         make([]string, 0),
 		exportedTasks: make([]string, 0),
+        exportedTasksMap: make(map[string]bool),
 	}
 }
 
@@ -19,6 +20,7 @@ type Env struct {
 	taskLock      sync.Mutex
 	tasks         []string
 	exportedTasks []string
+    exportedTasksMap map[string]bool
 }
 
 func (e *Env) GetVar(k string) interface{} {
@@ -54,8 +56,7 @@ func (e *Env) ExportedTasks() []string {
 }
 
 func (e *Env) GetTask(name string) Task {
-	lname := strings.ToLower(name)
-	t := e.vars.Get(lname)
+	t := e.vars.Get(name)
 	root := e.IsRoot()
 
 	if t == nil {
@@ -76,7 +77,14 @@ func (e *Env) GetTask(name string) Task {
 }
 
 func (e *Env) GetExportedTask(name string) Task {
-	return e.GetTask(name)
+    e.taskLock.Lock()
+    defer e.taskLock.Unlock()
+
+    if _, ok := e.exportedTasksMap[name]; ok {
+        return e.GetTask(name)
+    }
+
+    return nil
 }
 
 func (e *Env) AddTask(t Task) {
@@ -87,12 +95,13 @@ func (e *Env) AddTask(t Task) {
 	lname := strings.ToLower(name)
 
 	if name[0] != lname[0] {
-		e.exportedTasks = append(e.exportedTasks, lname)
+		e.exportedTasks = append(e.exportedTasks, name)
+        e.exportedTasksMap[name] = true
 	}
 
-	e.tasks = append(e.tasks, lname)
+	e.tasks = append(e.tasks, name)
 
-	e.vars.Set(lname, t)
+	e.vars.Set(name, t)
 }
 
 func (e *Env) Child() *Env {

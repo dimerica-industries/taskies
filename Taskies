@@ -1,5 +1,5 @@
 # vim: set filetype=yaml tabstop=2 shiftwidth=2 expandtab :
-
+---
 - task:
     name: Test
     description: Run go test on the codebase

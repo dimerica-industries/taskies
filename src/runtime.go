@@ -25,7 +25,12 @@ func LoadRuntime(path string, in io.Reader, out, err io.Writer) (*Runtime, error
 		return nil, e
 	}
 
-	p := filepath.Dir(path)
+	p, e := filepath.Abs(filepath.Dir(path))
+
+    if e != nil {
+        return nil, e
+    }
+
 	Debugf("[CHDIR] %s", p)
 
 	if e := os.Chdir(p); e != nil {
