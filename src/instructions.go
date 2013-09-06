@@ -2,8 +2,8 @@ package src
 
 import (
 	"fmt"
-    "os"
-    "path/filepath"
+	"os"
+	"path/filepath"
 	"reflect"
 )
 
@@ -98,11 +98,11 @@ func (t *includeNs) decode(data reflect.Value) error {
 
 func (t *includeNs) exec(r *Runtime, ns Namespace, e *Env) error {
 	for _, ns := range t.ns {
-        p, err := filepath.Abs(ns.path)
+		p, err := filepath.Abs(ns.path)
 
-        if err != nil {
-            return err
-        }
+		if err != nil {
+			return err
+		}
 
 		ns2, ast, err := r.nsg.load(p)
 
@@ -110,27 +110,27 @@ func (t *includeNs) exec(r *Runtime, ns Namespace, e *Env) error {
 			return err
 		}
 
-        pwd, err := os.Getwd()
+		pwd, err := os.Getwd()
 
-        if err != nil {
-            return err
-        }
+		if err != nil {
+			return err
+		}
 
-        err = os.Chdir(filepath.Dir(p))
+		err = os.Chdir(filepath.Dir(p))
 
-        if err != nil {
-            return err
-        }
+		if err != nil {
+			return err
+		}
 
 		if err = execAst(r, ns2, ns2.RootEnv(), ast); err != nil {
 			return err
 		}
 
-        err = os.Chdir(pwd)
+		err = os.Chdir(pwd)
 
-        if err != nil {
-            return err
-        }
+		if err != nil {
+			return err
+		}
 
 		e.SetVar(ns.alias, ns2.RootEnv())
 	}
@@ -197,7 +197,7 @@ func (t *defineTask) decode(data reflect.Value) error {
 }
 
 func (t *defineTask) exec(r *Runtime, ns Namespace, e *Env) error {
-	tsk, err := task(ns, t.name, t.description, t.set.vars, t.runList)
+	tsk, err := task(ns, e, t.name, t.description, t.set.vars, t.runList)
 
 	if err != nil {
 		return err
@@ -248,7 +248,7 @@ func (t *runTasks) decode(data reflect.Value) error {
 }
 
 func (t *runTasks) exec(r *Runtime, ns Namespace, e *Env) error {
-	tsk, err := task(ns, "anon", "", nil, t)
+	tsk, err := task(ns, e, "anon", "", nil, t)
 
 	if err != nil {
 		return err
@@ -335,7 +335,7 @@ func (t *setVar) exec(r *Runtime, ns Namespace, e *Env) error {
 	return nil
 }
 
-func task(ns Namespace, name string, description string, export map[string]interface{}, tsks *runTasks) (Task, error) {
+func task(ns Namespace, env *Env, name string, description string, export map[string]interface{}, tsks *runTasks) (Task, error) {
 	composite := len(tsks.tasks) != 1
 	tasks := make([]Task, 0)
 
@@ -357,20 +357,24 @@ func task(ns Namespace, name string, description string, export map[string]inter
 			}
 
 			task := &shellTask{
-				name:        name,
-				description: desc,
-				cmd:         "sh",
+				baseTask: &baseTask{
+					name:        name,
+					description: desc,
+					export:      exp,
+					varName:     rt.varName,
+					typ:         "shell",
+					env:         env,
+				},
+				cmd: "sh",
 				args: []string{
 					"-c",
 					rt.args.String(),
 				},
-				export:  exp,
-				varName: rt.varName,
 			}
 
 			tasks = append(tasks, task)
 		default:
-			task := ns.RootEnv().GetTask(rt.task)
+			task, _ := ns.RootEnv().GetTask(rt.task)
 
 			if task == nil {
 				return nil, fmt.Errorf("Missing task \"%s\"", rt.task)
@@ -383,13 +387,16 @@ func task(ns Namespace, name string, description string, export map[string]inter
 			}
 
 			proxy := &proxyTask{
-				name:        name,
-				description: desc,
-				typ:         rt.task,
-				task:        task,
-				args:        rt.args,
-				varName:     rt.varName,
-				export:      exp,
+				baseTask: &baseTask{
+					name:        name,
+					description: desc,
+					typ:         rt.task,
+					varName:     rt.varName,
+					export:      exp,
+					env:         env,
+				},
+				task: task,
+				args: rt.args,
 			}
 
 			tasks = append(tasks, proxy)
@@ -401,26 +408,32 @@ func task(ns Namespace, name string, description string, export map[string]inter
 	if composite {
 		if tsks.pipe {
 			task = &pipeTask{
-				name:        name,
-				description: description,
-				typ:         name,
-				tasks:       tasks,
-				export:      []map[string]interface{}{export},
+				baseTask: &baseTask{
+					name:        name,
+					description: description,
+					typ:         name,
+					export:      []map[string]interface{}{export},
+					env:         env,
+				},
+				tasks: tasks,
 			}
 		} else {
 			task = &compositeTask{
-				name:        name,
-				description: description,
-				typ:         name,
-				tasks:       tasks,
-				export:      []map[string]interface{}{export},
+				baseTask: &baseTask{
+					name:        name,
+					description: description,
+					typ:         name,
+					export:      []map[string]interface{}{export},
+					env:         env,
+				},
+				tasks: tasks,
 			}
 		}
 	} else {
 		task = tasks[0]
 	}
 
-	Debugf("[TASK CREATE] %#v", task)
+	Debugf("[TASK CREATE] [ENV=%p] %#v", env, task)
 
 	return task, nil
 }

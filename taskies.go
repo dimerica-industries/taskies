@@ -5,7 +5,7 @@ import (
 	"fmt"
 	taskies "github.com/dimerica-industries/taskies/src"
 	"os"
-    "path/filepath"
+	"path/filepath"
 	"runtime/debug"
 	"text/tabwriter"
 )
@@ -38,11 +38,11 @@ func main() {
 		os.Exit(0)
 	}
 
-    f, err := filepath.Abs(*file)
+	f, err := filepath.Abs(*file)
 
-    if err != nil {
-        panic(err)
-    }
+	if err != nil {
+		panic(err)
+	}
 
 	rt, err := taskies.LoadRuntime(f, os.Stdin, os.Stdout, os.Stderr)
 
@@ -79,9 +79,33 @@ func main() {
 		os.Exit(1)
 	}
 
+	rt.Watcher = &watcher{1}
+
 	err = rt.Run(task)
 
 	if err != nil {
 		panic(err)
 	}
+}
+
+type watcher struct {
+	level uint
+}
+
+func (w *watcher) BeforeRun(r *taskies.Runtime, e *taskies.Env, t taskies.Task) chan bool {
+	if w.level > 0 {
+		name := t.Name()
+
+		if name == "" {
+			name = t.Type()
+		}
+
+		fmt.Fprintf(r.Out(), "\n\033[1m[Running task: %s]\033[0m\n\n", name)
+	}
+
+	return nil
+}
+
+func (w *watcher) AfterRun(r *taskies.Runtime, e *taskies.Env, t taskies.Task) chan bool {
+	return nil
 }

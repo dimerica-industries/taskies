@@ -22,31 +22,12 @@ func rt(p string, in io.Reader) (*Runtime, error) {
 }
 
 type funcTask struct {
-	name        string
-	description string
-	varName     string
-	export      []map[string]interface{}
-	fn          func(RunContext) error
+	*baseTask
+	fn func(RunContext) error
 }
 
 func (t *funcTask) Run(r RunContext) error {
 	return t.fn(r)
-}
-
-func (t *funcTask) Var() string {
-	return t.varName
-}
-
-func (t *funcTask) Name() string {
-	return t.name
-}
-
-func (t *funcTask) Description() string {
-	return t.description
-}
-
-func (t *funcTask) Type() string {
-	return "func"
 }
 
 func (t *funcTask) Export() []map[string]interface{} {
@@ -65,7 +46,9 @@ func TestFuncRun(t *testing.T) {
 	r, _ := rt("", nil)
 
 	tk := &funcTask{
-		name: "test",
+		baseTask: &baseTask{
+			name: "test",
+		},
 		fn: func(r RunContext) error {
 			r.Out().Write([]byte("HELLO"))
 			return nil
@@ -107,7 +90,7 @@ func TestLoad(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if task := r.ns.RootEnv().GetTask("Test"); task == nil {
+	if task, _ := r.ns.RootEnv().GetTask("Test"); task == nil {
 		t.Fatal("Task test not loaded")
 	}
 }
@@ -453,6 +436,24 @@ func TestInclude(t *testing.T) {
 
 `),
 	}, "3", nil)
+}
+
+func TestIncludeScope(t *testing.T) {
+	testEquals(t, [][]byte{
+		[]byte(`
+- set:
+    x: 100
+        
+- task:
+    name: Hello
+    shell: echo {{x}}
+`),
+		[]byte(`
+- include: { other: ./0 }
+- other.Hello
+
+`),
+	}, "100", nil)
 }
 
 func TestTaskVar(t *testing.T) {

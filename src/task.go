@@ -11,6 +11,7 @@ type Task interface {
 	Run(RunContext) error
 	Export() []map[string]interface{}
 	Var() string
+	Env() *Env
 }
 
 type RunContext interface {
@@ -18,7 +19,7 @@ type RunContext interface {
 	Out() io.Writer
 	Err() io.Writer
 	Run(Task) error
-	Clone(io.Reader, io.Writer, io.Writer) RunContext
+	Clone(io.Reader, io.Writer, io.Writer, *Env) RunContext
 	Env() *Env
 }
 
@@ -26,8 +27,8 @@ type context struct {
 	in    io.Reader
 	out   io.Writer
 	err   io.Writer
-	runfn func(RunContext, Task) error
 	env   *Env
+	runfn func(RunContext, Task) error
 }
 
 func (c *context) Env() *Env {
@@ -50,7 +51,7 @@ func (c *context) Run(t Task) error {
 	return c.runfn(c, t)
 }
 
-func (c *context) Clone(in io.Reader, out io.Writer, err io.Writer) RunContext {
+func (c *context) Clone(in io.Reader, out io.Writer, err io.Writer, env *Env) RunContext {
 	if in == nil {
 		in = c.in
 	}
@@ -63,10 +64,15 @@ func (c *context) Clone(in io.Reader, out io.Writer, err io.Writer) RunContext {
 		err = c.err
 	}
 
+	if env == nil {
+		env = c.env
+	}
+
 	return &context{
 		in:    in,
 		out:   out,
 		err:   err,
 		runfn: c.runfn,
+		env:   env,
 	}
 }

@@ -6,34 +6,43 @@ import (
 	"reflect"
 )
 
-type proxyTask struct {
+type baseTask struct {
 	name        string
 	description string
 	typ         string
 	varName     string
-	task        Task
 	export      []map[string]interface{}
-	args        reflect.Value
+	env         *Env
 }
 
-func (t *proxyTask) Name() string {
+func (t *baseTask) Name() string {
 	return t.name
 }
 
-func (t *proxyTask) Description() string {
+func (t *baseTask) Description() string {
 	return t.description
 }
 
-func (t *proxyTask) Export() []map[string]interface{} {
+func (t *baseTask) Export() []map[string]interface{} {
 	return t.export
 }
 
-func (t *proxyTask) Type() string {
+func (t *baseTask) Type() string {
 	return t.typ
 }
 
-func (t *proxyTask) Var() string {
+func (t *baseTask) Var() string {
 	return t.varName
+}
+
+func (t *baseTask) Env() *Env {
+	return t.env
+}
+
+type proxyTask struct {
+	*baseTask
+	task Task
+	args reflect.Value
 }
 
 func (t *proxyTask) Run(r RunContext) error {
@@ -45,36 +54,18 @@ func (t *proxyTask) Run(r RunContext) error {
 		}
 	}
 
-	return t.task.Run(r)
+    env := r.Env().Child()
+    env.addParent(t.task.Env())
+
+	r2 := r.Clone(nil, nil, nil, env)
+
+	return t.task.Run(r2)
 }
 
 type shellTask struct {
-	name        string
-	varName     string
-	description string
-	cmd         string
-	args        []string
-	export      []map[string]interface{}
-}
-
-func (t *shellTask) Type() string {
-	return "shell"
-}
-
-func (t *shellTask) Var() string {
-	return t.varName
-}
-
-func (t *shellTask) Name() string {
-	return t.name
-}
-
-func (t *shellTask) Description() string {
-	return t.description
-}
-
-func (t *shellTask) Export() []map[string]interface{} {
-	return t.export
+	*baseTask
+	cmd  string
+	args []string
 }
 
 func (t *shellTask) Run(r RunContext) error {
@@ -96,32 +87,8 @@ func (t *shellTask) Run(r RunContext) error {
 }
 
 type compositeTask struct {
-	name        string
-	varName     string
-	description string
-	tasks       []Task
-	typ         string
-	export      []map[string]interface{}
-}
-
-func (t *compositeTask) Type() string {
-	return t.typ
-}
-
-func (t *compositeTask) Var() string {
-	return t.varName
-}
-
-func (t *compositeTask) Name() string {
-	return t.name
-}
-
-func (t *compositeTask) Description() string {
-	return t.description
-}
-
-func (t *compositeTask) Export() []map[string]interface{} {
-	return t.export
+	*baseTask
+	tasks []Task
 }
 
 func (t *compositeTask) Run(r RunContext) error {
@@ -135,32 +102,8 @@ func (t *compositeTask) Run(r RunContext) error {
 }
 
 type pipeTask struct {
-	name        string
-	varName     string
-	description string
-	typ         string
-	export      []map[string]interface{}
-	tasks       []Task
-}
-
-func (t *pipeTask) Var() string {
-	return t.varName
-}
-
-func (t *pipeTask) Name() string {
-	return t.name
-}
-
-func (t *pipeTask) Description() string {
-	return t.description
-}
-
-func (t *pipeTask) Export() []map[string]interface{} {
-	return t.export
-}
-
-func (t *pipeTask) Type() string {
-	return t.typ
+	*baseTask
+	tasks []Task
 }
 
 func (t *pipeTask) Run(r RunContext) error {
@@ -181,8 +124,8 @@ func (t *pipeTask) Run(r RunContext) error {
 		}
 
 		go func(t Task, in io.Reader, out io.Writer) {
-			r = r.Clone(in, out, nil)
-			err := r.Run(t)
+			r2 := r.Clone(in, out, nil, nil)
+			err := r2.Run(t)
 
 			if c, ok := out.(io.Closer); ok {
 				c.Close()

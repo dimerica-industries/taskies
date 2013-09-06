@@ -7,20 +7,20 @@ import (
 
 func NewEnv() *Env {
 	return &Env{
-		vars:          newVarSet(),
-		tasks:         make([]string, 0),
-		exportedTasks: make([]string, 0),
-        exportedTasksMap: make(map[string]bool),
+		vars:             newVarSet(),
+		tasks:            make([]string, 0),
+		exportedTasks:    make([]string, 0),
+		exportedTasksMap: make(map[string]bool),
 	}
 }
 
 type Env struct {
-	parent        *Env
-	vars          *varSet
-	taskLock      sync.Mutex
-	tasks         []string
-	exportedTasks []string
-    exportedTasksMap map[string]bool
+	parents          []*Env
+	vars             *varSet
+	taskLock         sync.Mutex
+	tasks            []string
+	exportedTasks    []string
+	exportedTasksMap map[string]bool
 }
 
 func (e *Env) GetVar(k string) interface{} {
@@ -30,7 +30,13 @@ func (e *Env) GetVar(k string) interface{} {
 		return v
 	}
 
-	return e.parent.GetVar(k)
+	for _, p := range e.parents {
+		if v = p.GetVar(k); v != nil {
+			return v
+		}
+	}
+
+	return nil
 }
 
 func (e *Env) SetVar(k string, v interface{}) {
@@ -55,36 +61,46 @@ func (e *Env) ExportedTasks() []string {
 	return e.exportedTasks
 }
 
-func (e *Env) GetTask(name string) Task {
+func (e *Env) GetTask(name string) (Task, *Env) {
 	t := e.vars.Get(name)
 	root := e.IsRoot()
 
-	if t == nil {
-		if root {
-			return nil
+	tryParents := func() (Task, *Env) {
+		for _, p := range e.parents {
+			if t, e := p.GetTask(name); t != nil {
+				return t, e
+			}
 		}
 
-		return e.parent.GetTask(name)
+		return nil, nil
+	}
+
+	if t == nil {
+		if root {
+			return nil, nil
+		}
+
+		return tryParents()
 	}
 
 	tsk := t.(Task)
 
 	if tsk != nil || e.IsRoot() {
-		return tsk
+		return tsk, e
 	}
 
-	return e.parent.GetTask(name)
+	return tryParents()
 }
 
-func (e *Env) GetExportedTask(name string) Task {
-    e.taskLock.Lock()
-    defer e.taskLock.Unlock()
+func (e *Env) GetExportedTask(name string) (Task, *Env) {
+	e.taskLock.Lock()
+	defer e.taskLock.Unlock()
 
-    if _, ok := e.exportedTasksMap[name]; ok {
-        return e.GetTask(name)
-    }
+	if _, ok := e.exportedTasksMap[name]; ok {
+		return e.GetTask(name)
+	}
 
-    return nil
+	return nil, nil
 }
 
 func (e *Env) AddTask(t Task) {
@@ -96,7 +112,7 @@ func (e *Env) AddTask(t Task) {
 
 	if name[0] != lname[0] {
 		e.exportedTasks = append(e.exportedTasks, name)
-        e.exportedTasksMap[name] = true
+		e.exportedTasksMap[name] = true
 	}
 
 	e.tasks = append(e.tasks, name)
@@ -106,21 +122,16 @@ func (e *Env) AddTask(t Task) {
 
 func (e *Env) Child() *Env {
 	e2 := NewEnv()
-	e2.parent = e
-
-	Debugf("[ENV CHILD] [parent=%p] [child=%p]", e, e2)
+	e2.addParent(e)
 
 	return e2
 }
 
 func (e *Env) IsRoot() bool {
-	return e.parent == nil
+	return len(e.parents) == 0
 }
 
-func (e *Env) Root() *Env {
-	if e.IsRoot() {
-		return e
-	}
-
-	return e.parent.Root()
+func (e *Env) addParent(p *Env) {
+	e.parents = append(e.parents, p)
+	Debugf("[ENV PARENT] [parent=%p] [child=%p]", p, e)
 }

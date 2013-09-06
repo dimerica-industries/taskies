@@ -32,7 +32,8 @@ func (n *ns) Tasks() []string {
 }
 
 func (n *ns) GetTask(k string) Task {
-	return n.RootEnv().GetExportedTask(k)
+	t, _ := n.RootEnv().GetExportedTask(k)
+	return t
 }
 
 func (n *ns) RootEnv() *Env {
@@ -53,7 +54,7 @@ type nsGroup struct {
 }
 
 func (n *nsGroup) load(path string) (Namespace, *ast, error) {
-    Debugf("[LOADING] %s", path)
+	Debugf("[LOADING] %s", path)
 
 	n.Lock()
 	defer n.Unlock()

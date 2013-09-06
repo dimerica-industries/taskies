@@ -27,9 +27,9 @@ func LoadRuntime(path string, in io.Reader, out, err io.Writer) (*Runtime, error
 
 	p, e := filepath.Abs(filepath.Dir(path))
 
-    if e != nil {
-        return nil, e
-    }
+	if e != nil {
+		return nil, e
+	}
 
 	Debugf("[CHDIR] %s", p)
 
@@ -69,11 +69,12 @@ func newRuntime(in io.Reader, out, err io.Writer) *Runtime {
 }
 
 type Runtime struct {
-	ns  Namespace
-	nsg *nsGroup
-	in  io.Reader
-	out io.Writer
-	err io.Writer
+	ns      Namespace
+	nsg     *nsGroup
+	in      io.Reader
+	out     io.Writer
+	err     io.Writer
+	Watcher Watcher
 }
 
 func (r *Runtime) In() io.Reader {
@@ -89,7 +90,7 @@ func (r *Runtime) Err() io.Writer {
 }
 
 func (r *Runtime) Run(task string) error {
-	t := r.ns.RootEnv().GetTask(task)
+	t, _ := r.ns.RootEnv().GetTask(task)
 
 	if t == nil {
 		return MissingTask
@@ -136,7 +137,13 @@ func (r *Runtime) run(t Task, env *Env, in io.Reader, out, err io.Writer) error 
 
 	cenv := env.Child()
 
-	ctxt := &context{
+	if t.Env() != nil {
+		cenv.addParent(t.Env())
+	}
+
+	var ctxt RunContext
+
+	ctxt = &context{
 		in:  in,
 		out: sout,
 		err: serr,
@@ -144,6 +151,12 @@ func (r *Runtime) run(t Task, env *Env, in io.Reader, out, err io.Writer) error 
 			return r.run(t2, cenv, c.In(), c.Out(), c.Err())
 		},
 		env: cenv,
+	}
+
+	if r.Watcher != nil {
+		if ch := r.Watcher.BeforeRun(r, cenv, t); ch != nil {
+			<-ch
+		}
 	}
 
 	e := t.Run(ctxt)
@@ -170,6 +183,12 @@ func (r *Runtime) run(t Task, env *Env, in io.Reader, out, err io.Writer) error 
 		env.SetVar(t.Var(), cenv)
 	}
 
+	if r.Watcher != nil {
+		if ch := r.Watcher.AfterRun(r, cenv, t); ch != nil {
+			<-ch
+		}
+	}
+
 	return e
 }
 
@@ -181,4 +200,9 @@ func execAst(r *Runtime, ns Namespace, e *Env, a *ast) error {
 	}
 
 	return nil
+}
+
+type Watcher interface {
+	BeforeRun(*Runtime, *Env, Task) chan bool
+	AfterRun(*Runtime, *Env, Task) chan bool
 }

@@ -125,10 +125,10 @@ func (e *varSet) set(k string, v interface{}) {
 }
 
 func isVarSet(d interface{}) bool {
-    if d == nil {
-        return false
-    }
+	if d == nil {
+		return false
+	}
 
-    _, ok := d.(*varSet)
-    return ok
+	_, ok := d.(*varSet)
+	return ok
 }
