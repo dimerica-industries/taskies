@@ -53,25 +53,26 @@ type nsGroup struct {
 	ns     map[string]Namespace
 }
 
-func (n *nsGroup) load(path string) (Namespace, *ast, error) {
+func (n *nsGroup) load(path string) (Namespace, *ast, bool, error) {
 	Debugf("[LOADING] %s", path)
 
 	n.Lock()
 	defer n.Unlock()
 
-	l, err := n.loader.load(path)
+	l, loaded, err := n.loader.load(path)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, loaded, err
 	}
 
 	if ns, ok := n.ns[l.id]; ok {
-		return ns, nil, nil
+		return ns, nil, loaded, nil
 	}
 
 	ns := newNs(l.id)
+	n.ns[l.id] = ns
 
-	return ns, l.ast, nil
+	return ns, l.ast, loaded, nil
 }
 
 func (n *nsGroup) get(k string) Namespace {

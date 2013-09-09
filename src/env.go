@@ -1,6 +1,7 @@
 package src
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 )
@@ -23,6 +24,22 @@ type Env struct {
 	exportedTasksMap map[string]bool
 }
 
+func (e *Env) Id() string {
+	str := fmt.Sprintf("%p", e)
+
+	if len(e.parents) > 0 {
+		parts := make([]string, len(e.parents))
+
+		for i, p := range e.parents {
+			parts[i] = p.Id()
+		}
+
+		str += " < (" + strings.Join(parts, ", ") + ")"
+	}
+
+	return str
+}
+
 func (e *Env) GetVar(k string) interface{} {
 	v := e.vars.get(k)
 
@@ -43,10 +60,10 @@ func (e *Env) SetVar(k string, v interface{}) {
 	k = template(k, e).(string)
 
 	if ev, ok := v.(*Env); ok {
-		Debugf("[ENV SET VAR] [ENV=%p] [KEY=%#v] [VALUE=%p]", e, k, v)
+		Debugf("[ENV SET VAR] [ENV=%s] [KEY=%#v] [VALUE=%s]", e.Id(), k, ev.Id())
 		v = ev.vars
 	} else {
-		Debugf("[ENV SET VAR] [ENV=%p] [KEY=%#v] [VALUE=%#v]", e, k, v)
+		Debugf("[ENV SET VAR] [ENV=%s] [KEY=%#v] [VALUE=%#v]", e.Id(), k, v)
 		v = template(v, e)
 	}
 
@@ -133,5 +150,5 @@ func (e *Env) IsRoot() bool {
 
 func (e *Env) addParent(p *Env) {
 	e.parents = append(e.parents, p)
-	Debugf("[ENV PARENT] [parent=%p] [child=%p]", p, e)
+	Debugf("[ENV PARENT] [parent=%p] [child=%s]", p, e.Id())
 }

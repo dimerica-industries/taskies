@@ -23,30 +23,30 @@ type load struct {
 	ast *ast
 }
 
-func (l *loader) load(path string) (*load, error) {
+func (l *loader) load(path string) (*load, bool, error) {
 	l.l.Lock()
 	defer l.l.Unlock()
 
 	id, err := filepath.Abs(path)
 
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if load, ok := l.loads[id]; ok {
-		return load, nil
+		return load, true, nil
 	}
 
 	raw, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	ast, err := parseBytes(raw)
 
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	l.loads[id] = &load{
@@ -55,5 +55,5 @@ func (l *loader) load(path string) (*load, error) {
 		ast: ast,
 	}
 
-	return l.loads[id], nil
+	return l.loads[id], false, nil
 }

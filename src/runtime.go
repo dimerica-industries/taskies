@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 	"unicode"
@@ -19,28 +18,22 @@ var (
 func LoadRuntime(path string, in io.Reader, out, err io.Writer) (*Runtime, error) {
 	rt := newRuntime(in, out, err)
 
-	ns, ast, e := rt.nsg.load(path)
+	ns, ast, loaded, e := rt.nsg.load(path)
 
 	if e != nil {
-		return nil, e
-	}
-
-	p, e := filepath.Abs(filepath.Dir(path))
-
-	if e != nil {
-		return nil, e
-	}
-
-	Debugf("[CHDIR] %s", p)
-
-	if e := os.Chdir(p); e != nil {
 		return nil, e
 	}
 
 	rt.ns = ns
 
-	if err := execAst(rt, ns, ns.RootEnv(), ast); err != nil {
-		return nil, err
+	if !loaded {
+		e := inDir(filepath.Dir(path), func() error {
+			return execAst(rt, ns, ns.RootEnv(), ast)
+		})
+
+		if e != nil {
+			return nil, e
+		}
 	}
 
 	return rt, nil
@@ -148,10 +141,12 @@ func (r *Runtime) run(t Task, env *Env, in io.Reader, out, err io.Writer) error 
 		out: sout,
 		err: serr,
 		runfn: func(c RunContext, t2 Task) error {
-			return r.run(t2, cenv, c.In(), c.Out(), c.Err())
+			return r.run(t2, c.Env(), c.In(), c.Out(), c.Err())
 		},
 		env: cenv,
 	}
+
+	Debugf("[RUN TASK] [ENV=%s] %#v", cenv.Id(), t)
 
 	if r.Watcher != nil {
 		if ch := r.Watcher.BeforeRun(r, cenv, t); ch != nil {

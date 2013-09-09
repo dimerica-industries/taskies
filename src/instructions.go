@@ -2,7 +2,6 @@ package src
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"reflect"
 )
@@ -97,42 +96,32 @@ func (t *includeNs) decode(data reflect.Value) error {
 }
 
 func (t *includeNs) exec(r *Runtime, ns Namespace, e *Env) error {
-	for _, ns := range t.ns {
-		p, err := filepath.Abs(ns.path)
+	for _, ns1 := range t.ns {
+		p, err := filepath.Abs(ns1.path)
 
 		if err != nil {
 			return err
 		}
 
-		ns2, ast, err := r.nsg.load(p)
+		ns2, ast, loaded, err := r.nsg.load(p)
 
 		if err != nil {
 			return err
 		}
 
-		pwd, err := os.Getwd()
+		Debugf("[NS LOAD] [from=%s] [id=%s] [alias=%s] [loaded=%v]", ns.Id(), ns2.Id(), ns1.alias, loaded)
 
-		if err != nil {
-			return err
+		if !loaded {
+			err := inDir(filepath.Dir(p), func() error {
+				return execAst(r, ns2, ns2.RootEnv(), ast)
+			})
+
+			if err != nil {
+				return err
+			}
 		}
 
-		err = os.Chdir(filepath.Dir(p))
-
-		if err != nil {
-			return err
-		}
-
-		if err = execAst(r, ns2, ns2.RootEnv(), ast); err != nil {
-			return err
-		}
-
-		err = os.Chdir(pwd)
-
-		if err != nil {
-			return err
-		}
-
-		e.SetVar(ns.alias, ns2.RootEnv())
+		e.SetVar(ns1.alias, ns2.RootEnv())
 	}
 
 	return nil
@@ -204,6 +193,7 @@ func (t *defineTask) exec(r *Runtime, ns Namespace, e *Env) error {
 	}
 
 	e.AddTask(tsk)
+	Debugf("[DEFINE TASK] [NAME=%s] [ENV=%s] %#v", tsk.Name(), e.Id(), tsk)
 
 	return nil
 }
@@ -386,18 +376,14 @@ func task(ns Namespace, env *Env, name string, description string, export map[st
 				exp = append(exp, export)
 			}
 
-			proxy := &proxyTask{
-				baseTask: &baseTask{
-					name:        name,
-					description: desc,
-					typ:         rt.task,
-					varName:     rt.varName,
-					export:      exp,
-					env:         env,
-				},
-				task: task,
-				args: rt.args,
-			}
+			proxy := proxyTask(task, rt.args)
+
+			proxy.name = name
+			proxy.description = desc
+			proxy.typ = rt.task
+			proxy.varName = rt.varName
+			proxy.export = exp
+			proxy.env = env
 
 			tasks = append(tasks, proxy)
 		}
@@ -432,8 +418,6 @@ func task(ns Namespace, env *Env, name string, description string, export map[st
 	} else {
 		task = tasks[0]
 	}
-
-	Debugf("[TASK CREATE] [ENV=%p] %#v", env, task)
 
 	return task, nil
 }

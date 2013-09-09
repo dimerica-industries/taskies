@@ -36,3 +36,25 @@ func Debugf(args ...interface{}) {
 		fmt.Printf("[DEBUG] "+format, args...)
 	})
 }
+
+func inDir(path string, fn func() error) error {
+	pwd, err := os.Getwd()
+
+	if err != nil {
+		return err
+	}
+
+	Debugf("[CHDIR] %s", path)
+	err = os.Chdir(path)
+
+	if err != nil {
+		return err
+	}
+
+	if err = fn(); err != nil {
+		return err
+	}
+
+	Debugf("[CHDIR] %s", pwd)
+	return os.Chdir(pwd)
+}

@@ -21,15 +21,6 @@ func rt(p string, in io.Reader) (*Runtime, error) {
 	return LoadRuntime(p, in, out, err)
 }
 
-type funcTask struct {
-	*baseTask
-	fn func(RunContext) error
-}
-
-func (t *funcTask) Run(r RunContext) error {
-	return t.fn(r)
-}
-
 func (t *funcTask) Export() []map[string]interface{} {
 	return t.export
 }
@@ -442,18 +433,36 @@ func TestIncludeScope(t *testing.T) {
 	testEquals(t, [][]byte{
 		[]byte(`
 - set:
-    x: 100
+    a: 100
+    b: 200
         
 - task:
     name: Hello
-    shell: echo {{x}}
+    run:
+        - shell: echo {{a}}
+        - shell: echo {{b}}
 `),
 		[]byte(`
-- include: { other: ./0 }
-- other.Hello
+- include: { other0: ./0 }
 
+- set:
+    b: 100
+        
+- task:
+    name: Hello
+    other0.Hello:
+        b: "{{b}}"
 `),
-	}, "100", nil)
+		[]byte(`
+- include: { other1: ./1 }
+
+- task:
+    name: ok
+    run:
+        - other1.Hello
+        - shell: echo "{{TASKS.other1.Hello.OUT}}"
+`),
+	}, "100\n100\n100\n100", nil)
 }
 
 func TestTaskVar(t *testing.T) {
@@ -474,4 +483,26 @@ func TestTaskVar(t *testing.T) {
 
       - shell: echo {{x.OUT}}
 `)}, "3\n3", nil)
+}
+
+func TestTaskVar2(t *testing.T) {
+	testEquals(t, [][]byte{[]byte(`
+- task:
+    name: one
+    run:
+      - var: a
+        shell: echo 3
+
+      - var: b
+        shell: echo 10
+
+    set:
+      c: "{{b.OUT}}"
+
+- task:
+    name: two
+    run:
+        - one
+        - shell: echo "{{LAST.c}}"
+`)}, "3\n10\n10", nil, "two")
 }

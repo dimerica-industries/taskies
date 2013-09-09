@@ -39,27 +39,39 @@ func (t *baseTask) Env() *Env {
 	return t.env
 }
 
-type proxyTask struct {
-	*baseTask
-	task Task
-	args reflect.Value
+func (t *baseTask) set(name, description, typ, varName string, export []map[string]interface{}, env *Env) {
+
 }
 
-func (t *proxyTask) Run(r RunContext) error {
-	if t.args.Kind() == reflect.Map {
-		keys := t.args.MapKeys()
+type funcTask struct {
+	*baseTask
+	fn func(r RunContext) error
+}
 
-		for _, k := range keys {
-			r.Env().SetVar(k.String(), t.args.MapIndex(k).Elem().Interface())
-		}
+func (t *funcTask) Run(r RunContext) error {
+	return t.fn(r)
+}
+
+func proxyTask(task Task, args reflect.Value) *funcTask {
+	return &funcTask{
+		baseTask: &baseTask{},
+		fn: func(r RunContext) error {
+			env := r.Env()
+			env.addParent(task.Env())
+
+			if args.Kind() == reflect.Map {
+				keys := args.MapKeys()
+
+				for _, k := range keys {
+					env.SetVar(k.String(), args.MapIndex(k).Elem().Interface())
+				}
+			}
+
+			r2 := r.Clone(nil, nil, nil, env)
+
+			return task.Run(r2)
+		},
 	}
-
-    env := r.Env().Child()
-    env.addParent(t.task.Env())
-
-	r2 := r.Clone(nil, nil, nil, env)
-
-	return t.task.Run(r2)
 }
 
 type shellTask struct {
@@ -76,7 +88,7 @@ func (t *shellTask) Run(r RunContext) error {
 		args[i] = template(t.args[i], r.Env()).(string)
 	}
 
-	Debugf("[SHELL] %s %s", cmd, args)
+	Debugf("[SHELL] [ENV=%s] %s %s", r.Env().Id(), cmd, args)
 	c := exec.Command(cmd, args...)
 
 	c.Stdin = r.In()

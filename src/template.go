@@ -46,7 +46,7 @@ func template(tmpl interface{}, e *Env) interface{} {
 
 	out := mustache.Render(str, &finder{e})
 
-	Debugf("[TEMPLATE] [ENV=%p] [before=%s] [after=%s]", e, str, out)
+	Debugf("[TEMPLATE] [ENV=%s] [before=%s] [after=%s]", e.Id(), str, out)
 
 	return out
 }
