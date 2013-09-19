@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"text/tabwriter"
 )
 
@@ -32,6 +33,13 @@ func main() {
 	flag.Parse()
 
 	task := flag.Arg(0)
+	args := make([]string, 0)
+
+	if flag.NArg() > 1 {
+		args = flag.Args()[1:]
+	}
+
+	nargs := parseArgs(args)
 
 	if *help {
 		flag.Usage()
@@ -81,6 +89,10 @@ func main() {
 
 	rt.Watcher = &watcher{1}
 
+	for k, v := range nargs {
+		rt.RootNs().RootEnv().SetVar(k, v)
+	}
+
 	err = rt.Run(task)
 
 	if err != nil {
@@ -108,4 +120,37 @@ func (w *watcher) BeforeRun(r *taskies.Runtime, e *taskies.Env, t taskies.Task) 
 
 func (w *watcher) AfterRun(r *taskies.Runtime, e *taskies.Env, t taskies.Task) chan bool {
 	return nil
+}
+
+func parseArgs(args []string) map[string]string {
+	ret := make(map[string]string)
+
+	k := ""
+
+	for _, v := range args {
+
+		if k == "" {
+			if v[0] != '-' {
+				continue
+			}
+
+			for v[0] == '-' {
+				v = v[1:]
+			}
+
+			k = v
+			i := strings.Index(k, "=")
+
+			if i >= 0 {
+				ret[k[0:i]] = k[i+1:]
+			}
+
+			k = ""
+		} else {
+			ret[k] = v
+			k = ""
+		}
+	}
+
+	return ret
 }
